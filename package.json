@@ -1,0 +1,11 @@
+{
+  "name": "gastromatch",
+  "version": "2.0.0",
+  "description": "GastroMatch: marketplace de aulas e kits de ingredientes de chefs e restaurantes.",
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node tests/api.test.js"
+  },
+  "engines": { "node": ">=22.5" },
+  "license": "UNLICENSED"
+}

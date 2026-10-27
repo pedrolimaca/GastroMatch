@@ -1,0 +1,64 @@
+erDiagram
+  USUARIO ||--o| CRIADOR_CONTEUDO : "pode ser"
+  USUARIO ||--o{ TRANSACAO_FINANCEIRA : realiza
+  USUARIO ||--o{ ACESSO_RECEITA : possui
+  USUARIO ||--o{ ASSINATURA : assina
+  USUARIO ||--o{ PEDIDO_KIT : solicita
+  USUARIO ||--o{ POST_COMUNIDADE : publica
+  CRIADOR_CONTEUDO ||--o{ RECEITA : cria
+  RECEITA ||--o| KIT_INGREDIENTE : oferece
+  TRANSACAO_FINANCEIRA ||--o| ACESSO_RECEITA : libera
+  TRANSACAO_FINANCEIRA ||--o| ASSINATURA : ativa
+  USUARIO { int id PK
+    string nome
+    string email UK
+    string senha_hash
+    string perfil "amador, criador, admin" }
+  CRIADOR_CONTEUDO { int id PK
+    int id_usuario FK
+    string chef_id UK
+    string tipo_perfil
+    string documento_path
+    string status_validacao "PENDENTE, APROVADO, REJEITADO"
+    bool termo_sanitario_aceito
+    float raio_entrega_km "1 a 15" }
+  RECEITA { int id PK
+    int id_criador FK
+    string titulo
+    string descricao
+    string instrucoes
+    string categoria_restricao
+    string categoria
+    int tempo_preparo_min
+    float preco
+    string link_videoaula
+    string status "RASCUNHO, PUBLICADA" }
+  KIT_INGREDIENTE { int id PK
+    int id_receita FK
+    string composicao
+    float valor_kit }
+  TRANSACAO_FINANCEIRA { int id PK
+    int id_usuario FK
+    string tipo "receita, assinatura, kit"
+    float valor
+    string metodo "cartao, pix"
+    string status "APROVADA, RECUSADA"
+    int http "200 ou 402" }
+  ACESSO_RECEITA { int id_usuario FK
+    string id_receita
+    int id_transacao FK }
+  ASSINATURA { int id_usuario FK
+    string chef_id
+    int id_transacao FK }
+  PEDIDO_KIT { int id PK
+    int id_usuario FK
+    string id_receita
+    string entrega "entrega, retirada"
+    string cep
+    string status "AGUARDANDO, CONFIRMADO, ENTREGUE" }
+  POST_COMUNIDADE { int id PK
+    int id_usuario FK
+    string id_receita
+    string legenda
+    int estrelas "0 a 5"
+    string resposta }

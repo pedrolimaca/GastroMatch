@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GastroMatch - Do chef para a sua cozinha</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="grain"></div>
+<div id="toast" class="toast"></div>
+
+<header class="topbar" id="topbar">
+  <div class="topbar-inner">
+    <div class="wordmark" onclick="goToTab('home')">Gastro<em>Match</em></div>
+    <nav class="desktop-nav">
+      <span class="tab-link" data-nav="home" onclick="goToTab('home')">Explorar</span>
+      <span class="tab-link" data-nav="receitas" onclick="goToTab('recipes')">Receitas</span>
+      <span class="tab-link" data-nav="chefs" onclick="navScroll('chef-grid')">Chefs</span>
+      <span class="tab-link" data-nav="restaurantes" onclick="navScroll('partner')">Restaurantes</span>
+      <span class="tab-link" data-nav="community" onclick="goToTab('community')">Comunidade</span>
+      <span class="nav-indicator" id="navIndicator"></span>
+    </nav>
+    <div class="topbar-actions">
+      <button class="theme-toggle" id="themeToggle" onclick="toggleDarkMode()" aria-label="Alternar modo escuro" title="Alternar modo escuro"></button>
+      <div id="authArea"></div>
+      <button class="hamburger" onclick="openDrawer()"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+
+<div class="drawer-backdrop" id="drawerBackdrop" onclick="closeDrawer()"></div>
+<nav class="drawer" id="drawer">
+  <span class="drawer-close" onclick="closeDrawer()">fechar</span>
+  <span class="dlink" onclick="closeDrawer(); goToTab('home')">Explorar</span>
+  <span class="dlink" onclick="closeDrawer(); goToTab('recipes')">Receitas</span>
+  <span class="dlink" onclick="closeDrawer(); navScroll('chef-grid')">Chefs</span>
+  <span class="dlink" onclick="closeDrawer(); navScroll('partner')">Restaurantes</span>
+  <span class="dlink" onclick="closeDrawer(); goToTab('community')">Comunidade</span>
+  <div class="drawer-theme" id="drawerThemeRow" onclick="toggleDarkMode()">
+    <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    <span id="drawerThemeLabel">Modo escuro</span>
+  </div>
+  <div class="drawer-cta" id="drawerAuthArea"></div>
+</nav>
+
+<main id="content" class="content"></main>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div>
+        <div class="footer-brand">Gastro<em>Match</em></div>
+        <p class="footer-tagline">Do chef para a sua cozinha.</p>
+      </div>
+      <div class="footer-col"><h5>Explorar</h5><a onclick="goToTab('recipes')">Receitas</a><a onclick="navScroll('chef-grid')">Chefs</a><a onclick="goToTab('community')">Comunidade</a></div>
+      <div class="footer-col"><h5>Para chefs</h5><a onclick="goToTab('dashboard')">Painel do criador</a><a onclick="navScroll('partner')">Seja parceiro</a></div>
+      <div class="footer-col"><h5>Suporte</h5><a onclick="goToTab('help')">Central de ajuda</a><a onclick="goToTab('contact')">Contato</a></div>
+      <div class="footer-col"><h5>Legal</h5><a onclick="goToTab('terms')">Termos</a><a onclick="goToTab('privacy')">Privacidade</a></div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 GastroMatch - protótipo SENAI/SC Joinville Sul</span>
+      <span>fotos ilustrativas: Wikimedia Commons<span id="videoCredit" hidden>, vídeo ilustrativo: "Food Reel" por Caramel Pictures (CC-BY 3.0, via Wikimedia Commons)</span></span>
+    </div>
+  </div>
+</footer>
+
+<nav class="bottom-tabs" id="bottomTabs">
+  <span class="bt-indicator" id="btIndicator"></span>
+  <div class="bt-item tab-link" data-page="home" onclick="goToTab('home')">
+    <svg class="icon" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg><span>início</span>
+  </div>
+  <div class="bt-item tab-link" data-page="recipes" onclick="goToTab('recipes')">
+    <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg><span>receitas</span>
+  </div>
+  <div class="bt-item tab-link" data-page="community" onclick="goToTab('community')">
+    <svg class="icon" viewBox="0 0 24 24"><path d="M21 11a8 8 0 1 1-3.5-6.6"/><path d="M21 4v6h-6"/></svg><span>comunidade</span>
+  </div>
+  <div class="bt-item tab-link" data-page="profile" onclick="goAccount()">
+    <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span>conta</span>
+  </div>
+</nav>
+  <script src="js/config.js"></script>
+  <script src="js/geo.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/features.js"></script>
+  <script src="js/pages.js"></script>
+  <script src="js/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+Modo de teste: servidor com banco de dados (http://localhost:3115/api)
+PASS  RF05 cadastro amador valida nome, e-mail e senha
+PASS  RF05 cadastro amador ok e e-mail duplicado bloqueado
+PASS  login com senha errada retorna 401
+PASS  RN03 cadastro de criador exige termo sanitário
+PASS  RN01 cadastro de criador exige documento
+PASS  RF01 criador novo fica PENDENTE e não publica receita (403)
+PASS  RN01 apenas admin acessa a curadoria (403 para criador)
+PASS  RN01 admin aprova o criador pendente
+PASS  RF02 criador aprovado salva rascunho e ele NÃO aparece na vitrine pública
+PASS  RF02 publicar faz a receita aparecer; despublicar volta a esconder
+PASS  RF02 validação: preço e tempo obrigatórios
+PASS  RF03 criador não compra receita (403)
+PASS  RN05 cartão recusado: HTTP 402, transação RECUSADA e acesso NÃO liberado
+PASS  RF03 cupom inválido é rejeitado; cupom GASTRO10 aplica 10%
+PASS  RF03 assinatura de catálogo libera o chef e registra transação
+PASS  RF04/RN02 kit fora do raio é bloqueado (422)
+PASS  RN03 kit sem aceite do termo sanitário é bloqueado
+PASS  RF04 retirada no estabelecimento dispensa raio e gera pedido
+PASS  RF06 amador publica post com nota e dúvida; comentário vazio é bloqueado
+PASS  Dashboard do chef mostra receita, pedido e venda reais; chef responde dúvida
+PASS  RF04 chef altera raio de entrega (1 a 15 km) com validação
+PASS  Chef não edita receita de outro criador (404)
+PASS  Sem login: rotas protegidas retornam 401
+
+23 testes passaram, 0 falharam.

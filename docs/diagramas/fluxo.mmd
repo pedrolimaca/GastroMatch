@@ -1,0 +1,23 @@
+flowchart TD
+  A([Chef ou restaurante se cadastra]) --> B{Aceitou o termo sanitário e anexou documento?}
+  B -- Não --> B1[Cadastro bloqueado com alerta da Vigilância Sanitária]
+  B -- Sim --> C[Status PENDENTE DE VALIDAÇÃO]
+  C --> D{Administrador avalia}
+  D -- Rejeita --> D1[REJEITADO: sem acesso a publicar]
+  D -- Aprova --> E[APROVADO: publica receitas e kits]
+  E --> F[Receita publicada aparece na vitrine por categoria, restrição e tempo]
+  F --> G([Cozinheiro cria conta e entra])
+  G --> H[Escolhe receita e clica em comprar]
+  H --> I{Pagamento}
+  I -- Cartão final 0000 --> I1[Erro 402: Transação não autorizada, nada é liberado]
+  I -- Aprovado --> J[Transação registrada e acesso liberado]
+  J --> K[Vídeo, modo cozinha e ficha técnica com marca d'água]
+  J --> L{Quer o kit de ingredientes?}
+  L -- Sim --> M{CEP dentro do raio do restaurante?}
+  M -- Não --> M1[Retirar no estabelecimento ou só a aula]
+  M -- Sim --> N[Aceita o termo sanitário e paga o kit]
+  M1 --> N
+  N --> O[Pedido aparece no dashboard do chef]
+  O --> P[Chef confirma e marca como entregue]
+  K --> Q[Posta foto, nota e dúvida na comunidade]
+  Q --> R[Chef responde pelo dashboard]

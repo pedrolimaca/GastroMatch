@@ -1,0 +1,19 @@
+flowchart LR
+  subgraph Navegador
+    UI[index.html, css e js/script.js]
+    FE[js/features.js: login, dashboards, checkout, filtros]
+    GEO1[js/geo.js: CEP e distância]
+    API1[js/api.js: camada de dados]
+    LS[(localStorage: modo local)]
+  end
+  subgraph Servidor Node
+    SRV[server/index.js: rotas em /api]
+    GEO2[js/geo.js]
+    DB[(SQLite: server/schema.sql)]
+  end
+  UI --> FE --> API1
+  FE --> GEO1
+  API1 -- sem servidor --> LS
+  API1 -- HTTP com token --> SRV
+  SRV --> DB
+  SRV --> GEO2
