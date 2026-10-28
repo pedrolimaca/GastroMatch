@@ -144,6 +144,24 @@ const rej = async (p, status, frag) => { try{ await p; }catch(e){ assert.strictE
     const put = calls.find(c => c.method === 'PUT'); assert.ok(put.url.endsWith('/auth/v1/user')); assert.deepStrictEqual(put.body, { password: 'novasenha' }); assert.strictEqual(put.headers.Authorization, 'Bearer JWT2');
   });
 
+  await t('excluir conta: exige EXCLUIR, confere a senha, chama gm_delete_account e encerra a sessão', async () => {
+    handler = u => u.includes('/token?grant_type=password') ? { status: 200, json: session() } : { status: 200, json: { user: { id: 'u1', email: 'a@b.com', kind: 'amador' } } };
+    await SB.request('POST', '/auth/login', { email: 'a@b.com', password: '123456' });
+    await rej(SB.request('POST', '/me/delete', { password: '123456', confirm: 'excluir' }), 422, 'EXCLUIR');
+    handler = u => u.includes('/token?grant_type=password') ? { status: 400, json: { error_code: 'invalid_credentials' } } : { status: 200, json: { user: { email: 'a@b.com' } } };
+    await rej(SB.request('POST', '/me/delete', { password: 'errada', confirm: 'EXCLUIR' }), 401, 'senha');
+    assert.ok(store['gm-sb-session'], 'senha errada não pode encerrar a sessão');
+    calls = []; handler = u => u.includes('/token?grant_type=password') ? { status: 200, json: session({ access_token: 'JWT3' }) }
+      : u.endsWith('/rpc/gm_me') ? { status: 200, json: { user: { email: 'a@b.com' } } } : { status: 200, json: {} };
+    await SB.request('POST', '/me/delete', { password: '123456', confirm: 'EXCLUIR' });
+    const del = calls.find(c => c.url.endsWith('/rpc/gm_delete_account'));
+    assert.deepStrictEqual(del.body, { p_confirm: 'EXCLUIR' }); assert.strictEqual(del.headers.Authorization, 'Bearer JWT3');
+    assert.strictEqual(store['gm-sb-session'], undefined);
+    assert.deepStrictEqual(await SB.request('GET', '/me'), { user: null });
+    handler = () => gmErr(403, 'A conta de administrador não pode ser excluída pelo site.');
+    store['gm-sb-session'] = JSON.stringify({ access_token: 'A', refresh_token: 'R', expires_at: 9999999999 }); await SB.init().catch(() => {});
+  });
+
   await t('logout limpa a sessão mesmo se a chamada falhar', async () => {
     handler = () => { throw new Error('rede'); };
     global.fetch = async () => { throw new Error('rede'); };

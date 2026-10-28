@@ -207,7 +207,32 @@ function renderProfile(){
   const prefs = `<section class="profile-card"><h2>Preferências</h2><p class="pc-sub">Ajustes de aparência neste dispositivo.</p>
       <div class="pref-row"><p>Tema do site<small id="pfThemeNow">${dark ? 'Modo escuro ativado' : 'Modo claro ativado'}</small></p><button class="tiny-btn alt" onclick="toggleDarkMode(); document.getElementById('pfThemeNow').textContent = darkMode ? 'Modo escuro ativado' : 'Modo claro ativado'">Alternar tema</button></div>
     </section>`;
-  return `<div class="wrap page-top"><div class="profile-layout">${aside}<div>${dados}${profileRoleHtml()}${senha}${prefs}</div></div></div>`;
+  return `<div class="wrap page-top"><div class="profile-layout">${aside}<div>${dados}${profileRoleHtml()}${senha}${prefs}${dangerZoneHtml()}</div></div></div>`;
+}
+
+/* exclusão da conta e de todos os dados (recurso de privacidade) */
+function dangerZoneHtml(){
+  const k = currentUser.kind;
+  if(k === 'admin') return `<section class="profile-card"><h2>Excluir conta</h2><p class="pc-sub" style="margin:0">A conta de administrador não pode ser excluída pelo site, para a plataforma não ficar sem administrador.</p></section>`;
+  const itens = k === 'criador'
+    ? ['seu cadastro (nome, e-mail e senha) e o perfil de criador, com documento e raio de entrega',
+       'todas as suas receitas e kits, inclusive rascunhos',
+       'as suas respostas na comunidade e as assinaturas ao seu catálogo',
+       'as publicações e os pagamentos feitos com esta conta']
+    : ['seu cadastro (nome, e-mail e senha)',
+       'as receitas desbloqueadas e as assinaturas',
+       'seus pedidos de kit e seus pagamentos',
+       'suas publicações na comunidade'];
+  const nota = k === 'criador' ? '<p class="pc-sub" style="margin:0 0 18px">As compras que outras pessoas fizeram com você continuam no histórico delas.</p>' : '';
+  return `<section class="profile-card danger-zone"><h2>Excluir conta e dados</h2>
+    <p class="pc-sub">Esta ação é <b>permanente</b> e não pode ser desfeita. Ao excluir, apagamos:</p>
+    <ul class="danger-list">${itens.map(i => '<li>' + i + '</li>').join('')}</ul>${nota}
+    <div class="profile-form two">
+      <div class="field"><label for="delPass">Sua senha</label><input id="delPass" type="password" autocomplete="current-password"></div>
+      <div class="field"><label for="delConfirm">Digite EXCLUIR para confirmar</label><input id="delConfirm" autocomplete="off" placeholder="EXCLUIR" onkeydown="if(event.key==='Enter')deleteAccount()"></div>
+    </div>
+    <div class="form-actions"><button class="danger-btn" id="delBtn" onclick="deleteAccount()">Excluir minha conta</button><span class="form-msg" id="delMsg" role="status"></span></div>
+  </section>`;
 }
 
 function profileRoleHtml(){
@@ -307,6 +332,20 @@ async function changePassword(){
   btn.disabled = false;
 }
 
+async function deleteAccount(){
+  const pass = document.getElementById('delPass').value, conf = document.getElementById('delConfirm').value.trim(), btn = document.getElementById('delBtn');
+  if(!pass){ setMsg('delMsg', 'Informe sua senha para confirmar.'); return; }
+  if(conf !== 'EXCLUIR'){ setMsg('delMsg', 'Digite EXCLUIR, em letras maiúsculas, para confirmar.'); return; }
+  if(!window.confirm('Tem certeza? Sua conta e todos os seus dados serão apagados para sempre.')) return;
+  btn.disabled = true; setMsg('delMsg', '');
+  try{
+    await API.post('/me/delete', { password: pass, confirm: conf });
+    favorites.clear();
+    await logout();                       /* limpa a sessão e o estado da tela e volta para a home */
+    showToast('Sua conta e todos os seus dados foram excluídos.');
+  }catch(e){ setMsg('delMsg', e.message || 'Não foi possível excluir a conta.'); btn.disabled = false; }
+}
+
 /* ---------------------------------------------------------------------
    PÁGINAS DE INFORMAÇÃO
    --------------------------------------------------------------------- */
@@ -350,7 +389,7 @@ function renderPrivacy(){
     <h2>Dados que coletamos</h2><ul><li>Nome, e-mail e senha (a senha é guardada de forma criptografada, nunca em texto puro).</li><li>Para criadores: tipo de perfil, nome do documento enviado e raio de entrega.</li><li>Pedidos, pagamentos simulados, receitas liberadas, assinaturas e publicações na comunidade.</li></ul>
     <h2>Onde ficam os dados</h2><p>${local ? 'Nesta versão, os dados ficam salvos apenas no seu navegador e não são enviados a nenhum servidor.' : mode === 'supabase' ? 'Os dados ficam no banco de dados do projeto (Supabase), com acesso restrito por regras de segurança.' : 'Os dados ficam no banco de dados do servidor do projeto.'} Dados de cartão não são armazenados.</p>
     <h2>Para que usamos</h2><p>Para identificar você, liberar o conteúdo que você comprou, calcular a entrega dos kits e mostrar suas atividades no perfil.</p>
-    <h2>Seus direitos</h2><p>Você pode atualizar seu nome e sua senha na tela de <span class="link-inline" onclick="goAccount()">perfil</span> e sair da conta a qualquer momento.</p>`);
+    <h2>Seus direitos</h2><p>Na tela de <span class="link-inline" onclick="goAccount()">perfil</span> você pode atualizar seu nome e sua senha, sair da conta a qualquer momento e <b>excluir sua conta junto com todos os seus dados</b>. A exclusão é permanente e pede a sua senha para confirmar.</p>`);
 }
 
 /* ganchos executados depois que uma tela é desenhada */

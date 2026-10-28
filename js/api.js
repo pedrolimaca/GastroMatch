@@ -124,6 +124,30 @@ const API = (() => {
     u.pass = await hash(b.password); save(); return {};
   });
 
+  /* privacidade: o usuário exclui a própria conta e todos os dados dela */
+  route('POST', '/me/delete', async b => {
+    const u = needUser();
+    if(u.kind === 'admin') fail(403, 'A conta de administrador não pode ser excluída pelo site.');
+    if(u.pass !== await hash(b.password || '')) fail(401, 'A senha está incorreta.');
+    if(String(b.confirm || '').trim() !== 'EXCLUIR') fail(422, 'Digite EXCLUIR para confirmar a exclusão.');
+    const c = creatorOf(u);
+    if(c){
+      const ids = db.recipes.filter(r => r.chefId === c.chefId).map(r => r.id);
+      db.access = db.access.filter(a => !ids.includes(a.recipeId));
+      db.subs = db.subs.filter(s => s.chefId !== c.chefId);
+      db.posts.forEach(p => { if(p.replyBy === c.chefId){ p.reply = ''; p.replyBy = null; } });
+      db.recipes = db.recipes.filter(r => r.chefId !== c.chefId);
+      db.creators = db.creators.filter(x => x.id !== c.id);
+    }
+    db.access = db.access.filter(a => a.userId !== u.id);
+    db.subs = db.subs.filter(s => s.userId !== u.id);
+    db.orders = db.orders.filter(o => o.userId !== u.id);
+    db.posts = db.posts.filter(p => p.userId !== u.id);
+    db.tx = db.tx.filter(t => t.userId !== u.id);
+    db.users = db.users.filter(x => x.id !== u.id);
+    save(); setToken(null); return {};
+  });
+
   route('GET', '/recipes', async () => ({ recipes: db.recipes.filter(r => r.status === 'publicada'), creators: db.creators.filter(c => c.status === 'APROVADO').map(c => ({ chefId:c.chefId, raio:c.raio, name:(db.users.find(u => u.id === c.userId) || { name:c.nome }).name })) }));
   const recipeBody = b => {
     if(!(b.name || '').trim()) fail(422, 'Informe o título da receita.');

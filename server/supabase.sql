@@ -399,6 +399,33 @@ begin
   return jsonb_build_object('user', public.gm_j_user(u));
 end $$;
 
+-- privacidade: apaga a conta do próprio usuário e todos os dados dela.
+-- A senha é conferida pelo site (que entra de novo com ela) e aqui exigimos a palavra EXCLUIR.
+-- Ao apagar auth.users, o ON DELETE CASCADE remove: usuario, criador_conteudo, receita, kit_ingrediente,
+-- transacao_financeira, acesso_receita, assinatura, pedido_kit e post_comunidade da pessoa.
+-- Antes, limpamos o que o criador deixou nos dados de OUTRAS pessoas (acessos, assinaturas e respostas).
+create or replace function public.gm_delete_account(p_confirm text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare u public.usuario; c public.criador_conteudo;
+begin
+  u := public.gm_need_user();
+  if u.perfil = 'admin' then
+    perform public.gm_fail(403, 'A conta de administrador não pode ser excluída pelo site.');
+  end if;
+  if coalesce(p_confirm, '') <> 'EXCLUIR' then
+    perform public.gm_fail(422, 'Digite EXCLUIR para confirmar a exclusão.');
+  end if;
+  select * into c from public.criador_conteudo where id_usuario = u.id;
+  if c.id is not null then
+    delete from public.acesso_receita
+      where id_receita in (select 'r' || r.id::text from public.receita r where r.id_criador = c.id);
+    delete from public.assinatura where chef_id = c.chef_id;
+    update public.post_comunidade set resposta = '', respondido_por = null where respondido_por = c.chef_id;
+  end if;
+  delete from auth.users where id = u.id;
+  return '{}'::jsonb;
+end $$;
+
 create or replace function public.gm_recipes() returns jsonb
 language sql security definer set search_path = public as $$
   select jsonb_build_object(
@@ -686,7 +713,7 @@ declare
   r record;
   api_fns text[] := array['gm_ping','gm_me','gm_update_name','gm_recipes','gm_recipe_create','gm_recipe_update',
     'gm_recipe_delete','gm_checkout','gm_posts','gm_post_create','gm_post_reply','gm_dashboard',
-    'gm_creator_radius','gm_order_status','gm_admin_overview','gm_admin_creator'];
+    'gm_creator_radius','gm_order_status','gm_admin_overview','gm_admin_creator','gm_delete_account'];
 begin
   for r in
     select p.oid::regprocedure as sig, p.proname

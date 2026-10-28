@@ -145,6 +145,18 @@ const SB = (() => {
     return {};
   });
 
+  /* privacidade: confere a senha entrando de novo e só então apaga a conta e os dados */
+  route('POST', '/me/delete', async b => {
+    needSession();
+    if(String(b.confirm || '').trim() !== 'EXCLUIR') fail(422, 'Digite EXCLUIR para confirmar a exclusão.');
+    const me = await rpc('gm_me'); if(!me.user) fail(401, 'Entre na sua conta para continuar.');
+    const v = await auth('/token?grant_type=password', { email: me.user.email, password: String(b.password || '') });
+    if(!v.ok) fail(401, 'A senha está incorreta.');
+    adoptSession(v.j);
+    await rpc('gm_delete_account', { p_confirm: 'EXCLUIR' });
+    saveSess(null); return {};
+  });
+
   route('GET', '/recipes', () => rpc('gm_recipes'));
   route('POST', '/recipes', b => rpc('gm_recipe_create', { p_data: b }));
   route('PATCH', '/recipes/:id', (b, p) => rpc('gm_recipe_update', { p_id: p[0], p_data: b }));

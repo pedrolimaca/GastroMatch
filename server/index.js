@@ -147,6 +147,30 @@ route('POST', '/me/password', (b, p, ctx) => {
   return {};
 });
 
+/* privacidade: o usuário exclui a própria conta e todos os dados dela.
+   criador_conteudo, receita e kit saem em cascata; o resto é apagado na ordem das chaves. */
+route('POST', '/me/delete', (b, p, ctx) => {
+  const u = needUser(ctx);
+  if(u.perfil === 'admin') fail(403, 'A conta de administrador não pode ser excluída pelo site.');
+  if(!checkPass(String(b.password || ''), u.senha_hash)) fail(401, 'A senha está incorreta.');
+  if(String(b.confirm || '').trim() !== 'EXCLUIR') fail(422, 'Digite EXCLUIR para confirmar a exclusão.');
+  tx(() => {
+    const c = one('SELECT * FROM criador_conteudo WHERE id_usuario = ?', u.id);
+    if(c){
+      run("DELETE FROM acesso_receita WHERE id_receita IN (SELECT 'r' || id FROM receita WHERE id_criador = ?)", c.id);
+      run('DELETE FROM assinatura WHERE chef_id = ?', c.chef_id);
+      run("UPDATE post_comunidade SET resposta = '', respondido_por = NULL WHERE respondido_por = ?", c.chef_id);
+    }
+    run('DELETE FROM acesso_receita WHERE id_usuario = ?', u.id);
+    run('DELETE FROM assinatura WHERE id_usuario = ?', u.id);
+    run('DELETE FROM pedido_kit WHERE id_usuario = ?', u.id);
+    run('DELETE FROM post_comunidade WHERE id_usuario = ?', u.id);
+    run('DELETE FROM transacao_financeira WHERE id_usuario = ?', u.id);
+    run('DELETE FROM usuario WHERE id = ?', u.id);
+  });
+  return {};
+});
+
 route('GET', '/recipes', () => ({
   recipes: all(RECIPE_SQL + " WHERE r.status = 'PUBLICADA' ORDER BY r.id").map(mRecipe),
   creators: all("SELECT c.chef_id, c.raio_entrega_km, COALESCE(u.nome, c.nome_publico) nome FROM criador_conteudo c LEFT JOIN usuario u ON u.id = c.id_usuario WHERE c.status_validacao = 'APROVADO'").map(c => ({ chefId:c.chef_id, raio:c.raio_entrega_km, name:c.nome })) }));

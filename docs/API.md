@@ -26,6 +26,7 @@ Erros: resposta `{ "message": "texto para o usuário" }` com o status HTTP corre
 | `GET /me` | Qualquer | | `{ user, creator, access[], subs[], orders[], tx[] }`. `user` é `null` sem login |
 | `PATCH /me` | Logado | `{ name }` | Atualiza o nome. 422 se tiver menos de 3 letras. Devolve `{ user }` |
 | `POST /me/password` | Logado | `{ current, password }` | Troca a senha. 401 se a atual estiver errada, 422 se a nova tiver menos de 6 caracteres |
+| `POST /me/delete` | Logado | `{ password, confirm }` | Exclui a própria conta e todos os dados dela. `confirm` deve ser `EXCLUIR`. 401 se a senha estiver errada, 422 se a confirmação não for `EXCLUIR`, 403 para administrador. Devolve `{}` |
 
 ## Receitas e catálogo
 

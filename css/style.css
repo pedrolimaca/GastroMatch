@@ -715,3 +715,12 @@ html[data-theme="dark"] .field input::placeholder, html[data-theme="dark"] .near
   .partner{ padding:36px 22px; }
   .geo-strip{ padding:18px; }
 }
+
+/* ---------------- EXCLUIR CONTA (zona de perigo) ---------------- */
+.profile-card.danger-zone{ border-color:var(--brick); }
+.profile-card.danger-zone h2{ color:var(--brick); }
+.danger-list{ margin:0 0 14px; padding-left:20px; font-size:14px; line-height:1.7; }
+.danger-btn{ background:var(--brick); color:#fff; font-size:13.5px; font-weight:600; padding:11px 22px; border-radius:2px; transition:transform .15s ease, opacity .15s ease; }
+.danger-btn:hover{ transform:translateY(-1px); }
+.danger-btn:disabled{ opacity:.6; cursor:wait; }
+html[data-theme="dark"] .danger-btn{ color:#1F1C17; }
