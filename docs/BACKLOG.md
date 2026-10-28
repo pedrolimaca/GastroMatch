@@ -37,14 +37,28 @@ Legenda: **Concluído** = implementado e testado | **Parcial** = funciona com li
 | Abas Receita, Vídeo e Avaliações | Concluído |
 | Testes automatizados e auditoria de responsividade | Concluído |
 
+## Sprint 3: Supabase, catálogo, perfil e privacidade
+
+| Item | Requisito | Status | Evidência |
+|---|---|---|---|
+| Banco na nuvem (PostgreSQL no Supabase) com login pelo Supabase Auth | RNF-D | Concluído | `docs/EVIDENCIAS_SUPABASE.md` |
+| Regras de negócio no banco (funções `gm_*`) e tabelas protegidas por RLS | RNF-D | Concluído | cadastro, compra e painel verificados com dados reais |
+| Plano B: o site usa o modo local se o Supabase não responder | RNF-C | Concluído | teste de navegador sem rede |
+| Catálogo de receitas com busca, categorias, filtros e ordenação | RF08 | Concluído | verificação em navegador |
+| Tela de perfil para os três tipos de conta | RF07 | Concluído | testes do perfil (`tests/api.test.js`) |
+| Excluir conta e todos os dados, dentro do perfil (pedido do professor) | RF09, RNF-P | Parcial | testes automatizados nos modos local e servidor; falta o teste manual no Supabase |
+| Páginas de ajuda, contato, termos e privacidade | - | Concluído | navegação verificada |
+| Correções do modo escuro e de espaçamento | RNF-R | Concluído | capturas de tela antes e depois |
+| Roteiro manual no Supabase: publicar receita, pedido de kit, cartão recusado, comunidade, troca de senha e exclusão de conta | RF02, RF04, RN05, RF06, RF07, RF09 | Pendente | falta executar e registrar (ver `docs/TESTES.md`) |
+
 ## Pendências e próximos passos
 
 | Item | Prioridade |
 |---|---|
-| Calcular o valor da compra no servidor (hoje vem do front) | Alta |
+| Calcular o valor da compra no servidor (hoje vem do front; o catálogo base ainda está no código do site) | Alta |
+| Executar e registrar o roteiro manual no Supabase | Alta |
 | Gateway de pagamento real | Alta |
-| Hospedar o servidor com disco persistente ou migrar para PostgreSQL | Alta |
-| Upload real de documentos e fotos | Média |
+| Upload real de documentos e fotos (no Supabase, usar o Storage em vez de enviar as imagens como texto) | Média |
 | Geocodificação real do CEP | Média |
 | Vídeo protegido de verdade | Média |
 | Mover o catálogo base (10 receitas, 8 restaurantes) para o banco | Média |

@@ -7,7 +7,7 @@ Plataforma de experiências gastronômicas que conecta usuários a chefs e resta
 - **Home:** hero, busca, categorias, receitas em destaque, restaurantes próximos, chefs e parceiros.
 - **Receitas (`#recipes`):** catálogo completo com banner por categoria, busca por nome, chef ou ingrediente, filtros de restrição, preparo e preço, e ordenação.
 - **Receita, Chef, Checkout do kit e Comunidade.**
-- **Perfil (`#profile`):** para cozinheiro, criador e administrador. Edita nome e senha e mostra atividade, curadoria ou números da plataforma, conforme o tipo de conta.
+- **Perfil (`#profile`):** para cozinheiro, criador e administrador. Edita nome e senha, mostra atividade, curadoria ou números da plataforma (conforme o tipo de conta) e permite **excluir a conta e todos os dados** (pede a senha e a palavra EXCLUIR).
 - **Painel do criador e Administração.**
 - **Ajuda, Contato, Termos e Privacidade.**
 
