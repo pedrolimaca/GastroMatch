@@ -3,15 +3,16 @@
    Simula o back-end REST (rotas, status HTTP, validações de negócio) e
    guarda tudo no localStorage. Para ligar o back-end real, defina API_BASE:
    todas as telas já consomem os dados por API.get/post/patch/del.
-   Modos: 'servidor' (banco SQLite via server/index.js, detectado sozinho em /api
-   ou definido em js/config.js) e 'local' (localStorage, usado no Vercel estático).
+   Modos: 'supabase' (banco Postgres no Supabase, js/supabase.js), 'servidor' (banco SQLite via
+   server/index.js, detectado sozinho em /api ou definido em js/config.js) e 'local'
+   (localStorage, usado no Vercel estático quando não há banco configurado).
    ===================================================================== */
 
 const API = (() => {
   const KEY = 'gm-db-v1', TOKEN = 'gm-token';
   const CUPONS = { GASTRO10: 0.10, CHEF20: 0.20 };
   const ASSINATURA = 29;
-  let db, mem = null, base = (typeof window !== 'undefined' && window.GM_API_BASE) || null;
+  let db, mem = null, base = (typeof window !== 'undefined' && window.GM_API_BASE) || null, sbMode = false;
 
   /* ---------- util ---------- */
   const fail = (status, message) => { const e = new Error(message); e.status = status; throw e; };
@@ -48,6 +49,8 @@ const API = (() => {
     try{ const c = new AbortController(); setTimeout(() => c.abort(), 1500); const r = await fetch('/api/health', { signal:c.signal }); if(r.ok && (await r.json()).ok) base = '/api'; }catch(e){}
   }
   async function init(){
+    /* Supabase: se estiver configurado e o banco responder, usa ele; senão cai para servidor/local */
+    if(typeof SB !== 'undefined' && SB.enabled()){ sbMode = await SB.init(); if(sbMode) return; }
     await detect(); if(base) return;
     try{ db = JSON.parse(localStorage.getItem(KEY)); }catch(e){}
     if(!db && mem) db = JSON.parse(mem);
@@ -224,6 +227,7 @@ const API = (() => {
 
   /* ---------- cliente ---------- */
   async function request(method, path, body){
+    if(sbMode) return SB.request(method, path, body);
     if(base){
       const tk = token(), r = await fetch(base + path, { method, headers: { 'Content-Type':'application/json', ...(tk ? { Authorization:'Bearer ' + tk } : {}) }, body: body ? JSON.stringify(body) : undefined });
       const j = await r.json().catch(() => ({}));
@@ -236,6 +240,6 @@ const API = (() => {
     if(!hit) fail(404, 'Rota não encontrada.');
     return hit.fn(body || {}, hit.re.exec(path).slice(1));
   }
-  return { init, distanceKm, mode: () => base ? 'servidor' : 'local', ASSINATURA, CUPONS,
+  return { init, distanceKm, mode: () => sbMode ? 'supabase' : base ? 'servidor' : 'local', ASSINATURA, CUPONS,
     get:(p) => request('GET', p), post:(p, b) => request('POST', p, b), patch:(p, b) => request('PATCH', p, b), del:(p) => request('DELETE', p) };
 })();

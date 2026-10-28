@@ -344,11 +344,11 @@ function renderTerms(){
     <h2>Comunidade</h2><p>Ao publicar fotos, notas e comentários, você declara ser autor do conteúdo e concorda em manter um ambiente respeitoso.</p>`);
 }
 function renderPrivacy(){
-  const local = typeof API !== 'undefined' && API.mode() === 'local';
+  const mode = typeof API !== 'undefined' ? API.mode() : 'local', local = mode === 'local';
   return infoWrap(`<h1>Política de privacidade</h1><p class="lead">Quais dados o GastroMatch guarda e para quê.</p>
     <div class="note-box">Este texto descreve o funcionamento do protótipo e não substitui uma política de privacidade definitiva.</div>
     <h2>Dados que coletamos</h2><ul><li>Nome, e-mail e senha (a senha é guardada de forma criptografada, nunca em texto puro).</li><li>Para criadores: tipo de perfil, nome do documento enviado e raio de entrega.</li><li>Pedidos, pagamentos simulados, receitas liberadas, assinaturas e publicações na comunidade.</li></ul>
-    <h2>Onde ficam os dados</h2><p>${local ? 'Nesta versão, os dados ficam salvos apenas no seu navegador e não são enviados a nenhum servidor.' : 'Os dados ficam no banco de dados do servidor do projeto.'} Dados de cartão não são armazenados.</p>
+    <h2>Onde ficam os dados</h2><p>${local ? 'Nesta versão, os dados ficam salvos apenas no seu navegador e não são enviados a nenhum servidor.' : mode === 'supabase' ? 'Os dados ficam no banco de dados do projeto (Supabase), com acesso restrito por regras de segurança.' : 'Os dados ficam no banco de dados do servidor do projeto.'} Dados de cartão não são armazenados.</p>
     <h2>Para que usamos</h2><p>Para identificar você, liberar o conteúdo que você comprou, calcular a entrega dos kits e mostrar suas atividades no perfil.</p>
     <h2>Seus direitos</h2><p>Você pode atualizar seu nome e sua senha na tela de <span class="link-inline" onclick="goAccount()">perfil</span> e sair da conta a qualquer momento.</p>`);
 }
