@@ -1,4 +1,4 @@
-Modo de teste: servidor com banco de dados (http://localhost:3115/api)
+Modo de teste: servidor com banco de dados (http://localhost:3913/api)
 PASS  RF05 cadastro amador valida nome, e-mail e senha
 PASS  RF05 cadastro amador ok e e-mail duplicado bloqueado
 PASS  login com senha errada retorna 401
@@ -21,6 +21,10 @@ PASS  RF06 amador publica post com nota e dúvida; comentário vazio é bloquead
 PASS  Dashboard do chef mostra receita, pedido e venda reais; chef responde dúvida
 PASS  RF04 chef altera raio de entrega (1 a 15 km) com validação
 PASS  Chef não edita receita de outro criador (404)
+PASS  Perfil: usuário altera o nome (mínimo 3 letras) e o /me reflete
+PASS  Perfil: troca de senha exige a senha atual e valida a nova
+PASS  Privacidade: excluir conta exige senha e a palavra EXCLUIR e apaga todos os dados da pessoa
+PASS  Privacidade: criador que exclui a conta leva receitas, assinaturas e respostas; administrador não exclui a própria
 PASS  Sem login: rotas protegidas retornam 401
 
-23 testes passaram, 0 falharam.
+27 testes passaram, 0 falharam.
