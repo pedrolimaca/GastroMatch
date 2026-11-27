@@ -1,19 +1,24 @@
 flowchart LR
-  AM([Cozinheiro amador])
-  CH([Chef ou restaurante])
-  AD([Administrador])
-  AM --- U1(Cadastrar e entrar)
-  AM --- U2(Filtrar receitas por categoria, restrição e tempo)
-  AM --- U3(Ver restaurantes por proximidade)
-  AM --- U4(Comprar receita ou assinar catálogo)
-  AM --- U5(Pedir kit com validação de CEP)
-  AM --- U6(Usar modo cozinha e baixar ficha técnica)
-  AM --- U7(Postar prato, nota e dúvida)
-  CH --- U1
-  CH --- U8(Enviar documento e termo sanitário)
-  CH --- U9(Publicar, editar e despublicar receitas)
-  CH --- U10(Gerenciar kits, raio e pedidos)
-  CH --- U11(Acompanhar vendas no dashboard)
-  CH --- U12(Responder dúvidas da comunidade)
-  AD --- U13(Aprovar ou rejeitar criadores)
-  AD --- U14(Consultar usuários e transações)
+  V([Visitante])
+  U([Cozinheiro])
+  C([Criador])
+  A([Administrador])
+  subgraph Sistema["GastroMatch"]
+    CAT(["Buscar e consultar catálogo"])
+    AUTH(["Cadastrar-se e entrar"])
+    PERF(["Gerenciar perfil"])
+    PAG(["Comprar acesso, assinar ou pedir kit"])
+    COZ(["Acessar receita e modo cozinha"])
+    COM(["Publicar avaliação ou dúvida"])
+    SOL(["Enviar candidatura e termo"])
+    PUB(["Manter receitas e kits"])
+    PED(["Gerenciar pedidos e responder dúvidas"])
+    CUR(["Aprovar ou rejeitar criadores"])
+    MON(["Consultar transações e usuários"])
+  end
+  V --- CAT & AUTH
+  U --- PERF & PAG & COZ & COM
+  C --- PERF & SOL & PUB & PED
+  A --- PERF & CUR & MON
+  CUR -. "aprovação habilita" .-> PUB
+  PAG -. "aprovação do acesso" .-> COZ

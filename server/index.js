@@ -8,12 +8,12 @@
 const http = require('http'), fs = require('fs'), path = require('path'), crypto = require('crypto');
 const { DatabaseSync } = require('node:sqlite');
 const GEO = require('../js/geo.js');
+const Checkout = require('../js/checkout.js');
 
 const ROOT = path.join(__dirname, '..');
 const PORT = process.env.PORT || 3000;
 const DB_FILE = process.env.DB_FILE || path.join(__dirname, 'gastromatch.db');
-const SECRET = process.env.JWT_SECRET || 'troque-este-segredo-em-producao';
-const CUPONS = { GASTRO10: 0.10, CHEF20: 0.20 };
+const SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const CATEGORIAS = ['alta', 'massas', 'carnes', 'brasileiras', 'vegetarianas', 'sobremesas'];
 
 const db = new DatabaseSync(DB_FILE);
@@ -172,7 +172,7 @@ route('POST', '/me/delete', (b, p, ctx) => {
 });
 
 route('GET', '/recipes', () => ({
-  recipes: all(RECIPE_SQL + " WHERE r.status = 'PUBLICADA' ORDER BY r.id").map(mRecipe),
+  recipes: all(RECIPE_SQL + " WHERE r.status = 'PUBLICADA' AND c.status_validacao = 'APROVADO' ORDER BY r.id").map(mRecipe),
   creators: all("SELECT c.chef_id, c.raio_entrega_km, COALESCE(u.nome, c.nome_publico) nome FROM criador_conteudo c LEFT JOIN usuario u ON u.id = c.id_usuario WHERE c.status_validacao = 'APROVADO'").map(c => ({ chefId:c.chef_id, raio:c.raio_entrega_km, name:c.nome })) }));
 route('POST', '/recipes', (b, p, ctx) => {
   const c = needApproved(ctx), d = recipeBody(b);
@@ -199,27 +199,20 @@ route('DELETE', '/recipes/:id', (b, p, ctx) => { const c = needApproved(ctx), r 
 route('POST', '/checkout', (b, p, ctx) => {
   const u = needUser(ctx);
   if(u.perfil !== 'amador') fail(403, 'Contas de criador e administrador não realizam compras.');
-  const price = Number(b.amount) || 0; if(!(price > 0)) fail(422, 'Valor inválido.');
-  let valor = price;
-  if(b.cupom){ const d = CUPONS[String(b.cupom).trim().toUpperCase()]; if(d === undefined) fail(422, 'Cupom inválido.'); valor = +(price * (1 - d)).toFixed(2); }
-  if(b.type === 'kit'){
-    if(!b.termo) fail(422, 'É obrigatório aceitar as normas da Vigilância Sanitária para prosseguir.');
-    if(b.entrega !== 'retirada'){
-      const d = GEO.distanceKm(String(b.cep || ''), b.chefId); if(d === null) fail(422, 'Informe um CEP válido.');
-      const c = one('SELECT raio_entrega_km r FROM criador_conteudo WHERE chef_id = ?', b.chefId);
-      if(d > (c ? c.r : 5)) fail(422, 'Endereço fora do raio de entrega. Escolha retirar no estabelecimento.');
-    }
-  }
-  if(!['receita', 'assinatura', 'kit'].includes(b.type)) fail(422, 'Tipo de compra inválido.');
+  const { refId, chefId, recipeName, valor, cupom } = Checkout.resolve(b, id => {
+    if(!/^r[1-9]\d*$/.test(id)) return null;
+    const recipe = one(RECIPE_SQL + " WHERE r.id = ? AND r.status = 'PUBLICADA'", id.slice(1));
+    return recipe && mRecipe(recipe);
+  }, id => one("SELECT raio_entrega_km raio FROM criador_conteudo WHERE chef_id = ? AND status_validacao = 'APROVADO'", id), fail, GEO.distanceKm);
   const metodo = b.metodo === 'pix' ? 'pix' : 'cartao', card = String(b.card || '').replace(/\s/g, '');
   const recusado = metodo === 'cartao' && (!/^\d{13,19}$/.test(card) || /0000$/.test(card));
   const result = tx(() => {
-    const tid = Number(run('INSERT INTO transacao_financeira (id_usuario,tipo,ref_id,chef_id,valor,metodo,cupom,status,http) VALUES (?,?,?,?,?,?,?,?,?)', u.id, b.type, String(b.refId), String(b.chefId), valor, metodo, b.cupom || '', recusado ? 'RECUSADA' : 'APROVADA', recusado ? 402 : 200).lastInsertRowid);
+    const tid = Number(run('INSERT INTO transacao_financeira (id_usuario,tipo,ref_id,chef_id,valor,metodo,cupom,status,http) VALUES (?,?,?,?,?,?,?,?,?)', u.id, b.type, refId, chefId, valor, metodo, cupom, recusado ? 'RECUSADA' : 'APROVADA', recusado ? 402 : 200).lastInsertRowid);
     if(recusado) return { tid, recusado:true };
-    if(b.type === 'receita') run('INSERT OR IGNORE INTO acesso_receita (id_usuario,id_receita,id_transacao) VALUES (?,?,?)', u.id, String(b.refId), tid);
-    if(b.type === 'assinatura') run('INSERT OR IGNORE INTO assinatura (id_usuario,chef_id,id_transacao) VALUES (?,?,?)', u.id, String(b.chefId), tid);
+    if(b.type === 'receita') run('INSERT OR IGNORE INTO acesso_receita (id_usuario,id_receita,id_transacao) VALUES (?,?,?)', u.id, refId, tid);
+    if(b.type === 'assinatura') run('INSERT OR IGNORE INTO assinatura (id_usuario,chef_id,id_transacao) VALUES (?,?,?)', u.id, chefId, tid);
     let order = null;
-    if(b.type === 'kit'){ const oid = Number(run('INSERT INTO pedido_kit (id_usuario,id_receita,nome_receita,chef_id,valor,entrega,janela,cep) VALUES (?,?,?,?,?,?,?,?)', u.id, String(b.refId), String(b.recipeName || ''), b.chefId, valor, b.entrega, b.slot || '', b.cep || '').lastInsertRowid); order = mOrder(one(ORDER_SQL + ' WHERE p.id = ?', oid)); }
+    if(b.type === 'kit'){ const oid = Number(run('INSERT INTO pedido_kit (id_usuario,id_receita,nome_receita,chef_id,valor,entrega,janela,cep) VALUES (?,?,?,?,?,?,?,?)', u.id, refId, recipeName, chefId, valor, b.entrega, b.slot || '', b.cep || '').lastInsertRowid); order = mOrder(one(ORDER_SQL + ' WHERE p.id = ?', oid)); }
     return { tid, order };
   });
   const t = mTx(one('SELECT * FROM transacao_financeira WHERE id = ?', result.tid));
@@ -280,7 +273,7 @@ route('POST', '/admin/creators/:id/:acao', (b, p, ctx) => {
 });
 
 /* ---------- servidor HTTP ---------- */
-const MIME = { '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.json':'application/json', '.png':'image/png', '.jpg':'image/jpeg', '.svg':'image/svg+xml', '.mp4':'video/mp4', '.md':'text/plain; charset=utf-8' };
+const MIME = { '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.json':'application/json', '.png':'image/png', '.webp':'image/webp', '.txt':'text/plain; charset=utf-8', '.jpg':'image/jpeg', '.svg':'image/svg+xml', '.mp4':'video/mp4', '.md':'text/plain; charset=utf-8' };
 const send = (res, status, body, headers = {}) => { res.writeHead(status, { 'Access-Control-Allow-Origin':'*', 'Access-Control-Allow-Headers':'Content-Type, Authorization', 'Access-Control-Allow-Methods':'GET,POST,PATCH,DELETE,OPTIONS', ...headers }); res.end(body); };
 const readBody = req => new Promise((ok, no) => { let s = 0; const c = []; req.on('data', d => { s += d.length; if(s > 8e6){ no(Object.assign(new Error('Requisição muito grande.'), { status:413 })); req.destroy(); } else c.push(d); }); req.on('end', () => ok(Buffer.concat(c).toString())); req.on('error', no); });
 
@@ -293,6 +286,7 @@ const server = http.createServer(async (req, res) => {
       if(!hit) fail(404, 'Rota não encontrada.');
       const raw = req.method === 'GET' || req.method === 'DELETE' ? '' : await readBody(req);
       let body = {}; if(raw){ try{ body = JSON.parse(raw); }catch(e){ fail(400, 'JSON inválido.'); } }
+      if(!body || typeof body !== 'object' || Array.isArray(body)) fail(400, 'Envie um objeto JSON.');
       const auth = (req.headers.authorization || '').replace(/^Bearer /, ''), uid = verify(auth);
       const ctx = { user: uid ? one('SELECT * FROM usuario WHERE id = ?', uid) : null };
       return send(res, 200, JSON.stringify(hit.fn(body, hit.re.exec(sub).slice(1), ctx)), { 'Content-Type':'application/json; charset=utf-8' });
@@ -301,10 +295,13 @@ const server = http.createServer(async (req, res) => {
       return send(res, e.status || 500, JSON.stringify({ message: e.status ? e.message : 'Erro interno do servidor.' }), { 'Content-Type':'application/json; charset=utf-8' });
     }
   }
-  let p = decodeURIComponent(url.pathname); if(p === '/') p = '/index.html';
-  const file = path.normalize(path.join(ROOT, p));
-  const blocked = /^\/(server|node_modules|\.git|tests)\b|\.db(-|$)/.test('/' + path.relative(ROOT, file).replace(/\\/g, '/'));
-  if(!file.startsWith(ROOT) || blocked || !fs.existsSync(file) || fs.statSync(file).isDirectory()) return send(res, 404, 'Não encontrado', { 'Content-Type':'text/plain; charset=utf-8' });
+  let p;
+  try{ p = decodeURIComponent(url.pathname); }catch(e){ return send(res, 400, 'Endereço inválido.'); }
+  if(p === '/') p = '/index.html';
+  const relative = path.posix.normalize(p);
+  const file = path.join(ROOT, relative);
+  const publicAsset = relative === '/index.html' || /^\/(css|js|assets)\/[a-z0-9.-]+$/i.test(relative);
+  if(!publicAsset || !fs.existsSync(file) || !fs.statSync(file).isFile()) return send(res, 404, 'Não encontrado', { 'Content-Type':'text/plain; charset=utf-8' });
   send(res, 200, fs.readFileSync(file), { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
 });
 if(require.main === module) server.listen(PORT, () => console.log('GastroMatch rodando em http://localhost:' + PORT + ' (banco: ' + DB_FILE + ')'));

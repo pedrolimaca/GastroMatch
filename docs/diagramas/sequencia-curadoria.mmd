@@ -1,0 +1,21 @@
+sequenceDiagram
+  actor C as Criador
+  participant UI as GastroMatch
+  participant API as Backend
+  participant DB as Banco
+  actor A as Administrador
+  C->>UI: Preenche cadastro, referência, termo e raio
+  UI->>API: Solicita cadastro do criador
+  API->>DB: Registra perfil PENDENTE
+  DB-->>API: Perfil criado
+  API-->>UI: Sessão com painel restrito
+  UI-->>C: Exibe situação pendente
+  A->>UI: Consulta curadoria
+  UI->>API: Busca criadores pendentes
+  API-->>UI: Dados e referência declarada
+  A->>UI: Aprova ou rejeita o perfil
+  UI->>API: Envia decisão administrativa
+  API->>DB: Grava status de validação
+  C->>UI: Abre o painel novamente
+  UI->>API: Consulta dashboard
+  API-->>UI: Habilita publicação se APROVADO

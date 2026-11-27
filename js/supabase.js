@@ -13,7 +13,7 @@ const SB = (() => {
   const cfg = () => (typeof window !== 'undefined' && window.GM_SUPABASE) || {};
   const enabled = () => !!(cfg().url && cfg().key);
   const base = () => String(cfg().url).replace(/\/+$/, '');
-  let sess = null, mem = null;
+  let sess = null, mem = null, refreshing = null;
 
   const fail = (status, message) => { const e = new Error(message); e.status = status; throw e; };
 
@@ -35,7 +35,7 @@ const SB = (() => {
   const headers = token => ({ 'Content-Type':'application/json', apikey: cfg().key, ...(token ? { Authorization:'Bearer ' + token } : {}) });
   async function http(url, opt){
     let r;
-    try{ r = await fetch(url, opt); }catch(e){ fail(0, 'Não foi possível conectar ao banco de dados. Verifique sua internet.'); }
+    try{ r = await fetch(url, { ...opt, signal: AbortSignal.timeout(10000) }); }catch(e){ fail(0, 'Não foi possível conectar ao banco de dados. Verifique sua internet.'); }
     const j = await r.json().catch(() => ({}));
     return { ok: r.ok, status: r.status, j };
   }
@@ -45,9 +45,21 @@ const SB = (() => {
   async function freshToken(){
     if(!sess) return null;
     if(sess.expires_at - 30 > Date.now() / 1000) return sess.access_token;
-    const r = await auth('/token?grant_type=refresh_token', { refresh_token: sess.refresh_token });
-    if(!r.ok || !r.j.access_token){ saveSess(null); return null; }
-    adoptSession(r.j); return sess.access_token;
+    if(!refreshing){
+      const previous = sess;
+      refreshing = (async () => {
+        const r = await auth('/token?grant_type=refresh_token', { refresh_token: previous.refresh_token });
+        if(sess !== previous) return sess?.access_token || null;
+        if(!r.ok || !r.j.access_token){
+          if(r.status === 400 || r.status === 401) saveSess(null);
+          else fail(r.status, 'Não foi possível renovar sua sessão. Tente novamente.');
+          return null;
+        }
+        adoptSession(r.j);
+        return sess.access_token;
+      })().finally(() => { refreshing = null; });
+    }
+    return refreshing;
   }
 
   /* chama uma função SQL gm_*; erros "GMxxx" viram erro HTTP xxx (como no servidor Node) */
@@ -145,15 +157,12 @@ const SB = (() => {
     return {};
   });
 
-  /* privacidade: confere a senha entrando de novo e só então apaga a conta e os dados */
   route('POST', '/me/delete', async b => {
     needSession();
     if(String(b.confirm || '').trim() !== 'EXCLUIR') fail(422, 'Digite EXCLUIR para confirmar a exclusão.');
-    const me = await rpc('gm_me'); if(!me.user) fail(401, 'Entre na sua conta para continuar.');
-    const v = await auth('/token?grant_type=password', { email: me.user.email, password: String(b.password || '') });
-    if(!v.ok) fail(401, 'A senha está incorreta.');
-    adoptSession(v.j);
-    await rpc('gm_delete_account', { p_confirm: 'EXCLUIR' });
+    const password = String(b.password || '');
+    if(!password) fail(422, 'Informe sua senha para confirmar.');
+    await rpc('gm_delete_account', { p_confirm: 'EXCLUIR', p_password: password });
     saveSess(null); return {};
   });
 
@@ -192,7 +201,10 @@ const SB = (() => {
   /* true se o banco respondeu; false -> o site cai para o modo local */
   async function init(){
     loadSess();
-    try{ await rpc('gm_ping'); return true; }
+    try{
+      const r = await http(base() + '/rest/v1/rpc/gm_ping', { method:'POST', headers:headers(), body:'{}' });
+      return r.ok && r.j === true;
+    }
     catch(e){ console.warn('[GastroMatch] Supabase indisponível, usando o modo local:', e.message); return false; }
   }
   return { enabled, init, request };

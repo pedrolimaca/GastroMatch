@@ -1,0 +1,5 @@
+PASS  SQL aplicado duas vezes em PostgreSQL local (PGlite); Auth simulado.
+PASS  10 receitas e preços de demonstração iguais ao catálogo JavaScript.
+PASS  Receita publicada, kit, cupom e assinatura usam preço e título da base.
+PASS  CEP inválido, referência inexistente, curadoria, recusa registrada e acesso preservado.
+PASS  Exclusão exige confirmação e senha conferida no banco; dados do comprador removidos em cascata.

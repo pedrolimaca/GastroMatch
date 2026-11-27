@@ -14,6 +14,11 @@
 -- ---------------------------------------------------------------------
 -- 1) TABELAS
 -- ---------------------------------------------------------------------
+begin;
+
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
+
 create table if not exists public.usuario (
   id uuid primary key references auth.users(id) on delete cascade,
   nome text not null,
@@ -33,6 +38,17 @@ create table if not exists public.criador_conteudo (
   termo_sanitario_aceito boolean not null default false,
   raio_entrega_km numeric not null default 5 check (raio_entrega_km between 1 and 15)
 );
+
+-- Preços dos itens de demonstração, com os mesmos IDs de js/checkout.js.
+create table if not exists public.catalogo_demo (
+  id text primary key,
+  titulo text not null,
+  chef_id text not null references public.criador_conteudo(chef_id) on delete cascade,
+  preco numeric(10,2) not null check (preco > 0),
+  valor_kit numeric(10,2) not null check (valor_kit > 0)
+);
+alter table public.catalogo_demo enable row level security;
+revoke all on public.catalogo_demo from anon, authenticated;
 
 create table if not exists public.receita (
   id bigint generated always as identity primary key,
@@ -400,13 +416,14 @@ begin
 end $$;
 
 -- privacidade: apaga a conta do próprio usuário e todos os dados dela.
--- A senha é conferida pelo site (que entra de novo com ela) e aqui exigimos a palavra EXCLUIR.
+-- O banco confirma a senha atual com o hash do Supabase Auth e exige a palavra EXCLUIR.
 -- Ao apagar auth.users, o ON DELETE CASCADE remove: usuario, criador_conteudo, receita, kit_ingrediente,
 -- transacao_financeira, acesso_receita, assinatura, pedido_kit e post_comunidade da pessoa.
 -- Antes, limpamos o que o criador deixou nos dados de OUTRAS pessoas (acessos, assinaturas e respostas).
-create or replace function public.gm_delete_account(p_confirm text) returns jsonb
+drop function if exists public.gm_delete_account(text);
+create or replace function public.gm_delete_account(p_confirm text, p_password text) returns jsonb
 language plpgsql security definer set search_path = public as $$
-declare u public.usuario; c public.criador_conteudo;
+declare u public.usuario; c public.criador_conteudo; v_hash text;
 begin
   u := public.gm_need_user();
   if u.perfil = 'admin' then
@@ -414,6 +431,11 @@ begin
   end if;
   if coalesce(p_confirm, '') <> 'EXCLUIR' then
     perform public.gm_fail(422, 'Digite EXCLUIR para confirmar a exclusão.');
+  end if;
+  select encrypted_password into v_hash from auth.users where id = u.id for update;
+  if coalesce(p_password, '') = '' or coalesce(v_hash, '') = ''
+    or extensions.crypt(p_password, v_hash) is distinct from v_hash then
+    perform public.gm_fail(401, 'A senha está incorreta.');
   end if;
   select * into c from public.criador_conteudo where id_usuario = u.id;
   if c.id is not null then
@@ -430,7 +452,8 @@ create or replace function public.gm_recipes() returns jsonb
 language sql security definer set search_path = public as $$
   select jsonb_build_object(
     'recipes', coalesce((select jsonb_agg(public.gm_recipe_json(r.id) order by r.id)
-                         from public.receita r where r.status = 'PUBLICADA'), '[]'::jsonb),
+                         from public.receita r join public.criador_conteudo c on c.id = r.id_criador
+                         where r.status = 'PUBLICADA' and c.status_validacao = 'APROVADO'), '[]'::jsonb),
     'creators', coalesce((select jsonb_agg(jsonb_build_object('chefId', c.chef_id, 'raio', c.raio_entrega_km,
                                    'name', coalesce(us.nome, c.nome_publico)) order by c.id)
                           from public.criador_conteudo c left join public.usuario us on us.id = c.id_usuario
@@ -511,7 +534,7 @@ language plpgsql security definer set search_path = public as $$
 declare
   u public.usuario;
   v_price numeric; v_valor numeric; v_desc numeric;
-  v_type text; v_chef text; v_ref text; v_cupom text;
+  v_type text; v_chef text; v_ref text; v_cupom text; v_title text;
   v_dist numeric; v_raio numeric; v_metodo text; v_recusado boolean;
   v_tid bigint; v_oid bigint;
 begin
@@ -519,36 +542,62 @@ begin
   if u.perfil <> 'amador' then
     perform public.gm_fail(403, 'Contas de criador e administrador não realizam compras.');
   end if;
-  v_price := coalesce(public.gm_num(p_data->>'amount'), 0);
-  if not (v_price > 0) then
-    perform public.gm_fail(422, 'Valor inválido.');
+  v_type := p_data->>'type';
+  v_ref := coalesce(p_data->>'refId', '');
+  if v_type is null or v_type not in ('receita', 'assinatura', 'kit') then
+    perform public.gm_fail(422, 'Tipo de compra inválido.');
+  end if;
+  if v_type = 'assinatura' then
+    v_chef := v_ref;
+    v_price := 29;
+  else
+    select d.chef_id, d.titulo, case when v_type = 'kit' then d.valor_kit else d.preco end
+      into v_chef, v_title, v_price from public.catalogo_demo d where d.id = v_ref;
+    if not found then
+      select c.chef_id, r.titulo, case when v_type = 'kit' then k.valor_kit else r.preco end
+        into v_chef, v_title, v_price
+        from public.receita r join public.criador_conteudo c on c.id = r.id_criador
+        left join public.kit_ingrediente k on k.id_receita = r.id
+        where v_ref ~ '^r[1-9][0-9]{0,17}$' and r.id = substring(v_ref from '^r([1-9][0-9]{0,17})$')::bigint
+          and r.status = 'PUBLICADA';
+      if not found then
+        perform public.gm_fail(404, 'Receita indisponível.');
+      end if;
+    end if;
+  end if;
+  select raio_entrega_km into v_raio from public.criador_conteudo
+    where chef_id = v_chef and status_validacao = 'APROVADO';
+  if not found then
+    perform public.gm_fail(404, 'Criador indisponível.');
+  end if;
+  if p_data->>'chefId' is not null and p_data->>'chefId' <> v_chef then
+    perform public.gm_fail(422, 'A compra não corresponde ao criador informado.');
+  end if;
+  if coalesce(v_price, 0) <= 0 then
+    perform public.gm_fail(422, 'Kit indisponível para esta receita.');
   end if;
   v_valor := v_price;
-  v_cupom := nullif(btrim(coalesce(p_data->>'cupom', '')), '');
-  if v_cupom is not null then
-    v_desc := case upper(v_cupom) when 'GASTRO10' then 0.10 when 'CHEF20' then 0.20 else null end;
+  v_cupom := upper(btrim(coalesce(p_data->>'cupom', '')));
+  if v_cupom <> '' then
+    v_desc := case v_cupom when 'GASTRO10' then 0.10 when 'CHEF20' then 0.20 else null end;
     if v_desc is null then
       perform public.gm_fail(422, 'Cupom inválido.');
     end if;
     v_valor := round(v_price * (1 - v_desc), 2);
   end if;
-  v_type := p_data->>'type';
-  v_chef := coalesce(p_data->>'chefId', '');
-  v_ref := coalesce(p_data->>'refId', '');
-  if v_type is null or v_type not in ('receita', 'assinatura', 'kit') then
-    perform public.gm_fail(422, 'Tipo de compra inválido.');
-  end if;
   if v_type = 'kit' then
-    if coalesce(p_data->>'termo', '') <> 'true' then
+    if (p_data->'termo') is distinct from 'true'::jsonb then
       perform public.gm_fail(422, 'É obrigatório aceitar as normas da Vigilância Sanitária para prosseguir.');
     end if;
-    if coalesce(p_data->>'entrega', '') <> 'retirada' then
+    if coalesce(p_data->>'entrega', '') not in ('entrega', 'retirada') then
+      perform public.gm_fail(422, 'Escolha entrega ou retirada.');
+    end if;
+    if p_data->>'entrega' = 'entrega' then
       v_dist := public.gm_distance_km(coalesce(p_data->>'cep', ''), v_chef);
       if v_dist is null then
         perform public.gm_fail(422, 'Informe um CEP válido.');
       end if;
-      select raio_entrega_km into v_raio from public.criador_conteudo where chef_id = v_chef;
-      if v_dist > coalesce(v_raio, 5) then
+      if v_dist > v_raio then
         perform public.gm_fail(422, 'Endereço fora do raio de entrega. Escolha retirar no estabelecimento.');
       end if;
     end if;
@@ -557,7 +606,7 @@ begin
   v_recusado := v_metodo = 'cartao' and coalesce(p_data->>'card_ok', '') <> 'true';
 
   insert into public.transacao_financeira (id_usuario, tipo, ref_id, chef_id, valor, metodo, cupom, status, http)
-  values (u.id, v_type, v_ref, v_chef, v_valor, v_metodo, coalesce(p_data->>'cupom', ''),
+  values (u.id, v_type, v_ref, v_chef, v_valor, v_metodo, v_cupom,
           case when v_recusado then 'RECUSADA' else 'APROVADA' end, case when v_recusado then 402 else 200 end)
   returning id into v_tid;
 
@@ -573,7 +622,7 @@ begin
     on conflict (id_usuario, chef_id) do nothing;
   else
     insert into public.pedido_kit (id_usuario, id_receita, nome_receita, chef_id, valor, entrega, janela, cep)
-    values (u.id, v_ref, coalesce(p_data->>'recipeName', ''), v_chef, v_valor, coalesce(p_data->>'entrega', 'entrega'),
+    values (u.id, v_ref, v_title, v_chef, v_valor, coalesce(p_data->>'entrega', 'entrega'),
             coalesce(p_data->>'slot', ''), coalesce(p_data->>'cep', ''))
     returning id into v_oid;
   end if;
@@ -720,7 +769,10 @@ begin
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.proname like 'gm\_%'
   loop
-    if r.proname = any (api_fns) then
+    if r.proname = 'gm_delete_account' then
+      execute format('revoke all on function %s from public, anon, authenticated', r.sig);
+      execute format('grant execute on function %s to authenticated', r.sig);
+    elsif r.proname = any (api_fns) then
       execute format('revoke all on function %s from public', r.sig);
       execute format('grant execute on function %s to anon, authenticated', r.sig);
     else
@@ -744,5 +796,21 @@ values
   ('verde',   'Verde Vivo',         'restaurante', 'cnpj_verde.pdf',   'APROVADO', true, 4)
 on conflict (chef_id) do nothing;
 
+insert into public.catalogo_demo (id, titulo, chef_id, preco, valor_kit)
+values
+  ('risoto-funghi', 'Risoto de Funghi Porcini', 'torino', 34.90, 46.00),
+  ('tagliatelle-ragu', 'Tagliatelle ao Ragu', 'torino', 27.90, 38.00),
+  ('cordeiro-porto', 'Cordeiro ao Vinho do Porto', 'renato', 42.00, 68.00),
+  ('curry-verde', 'Curry Verde Tailandês', 'siam', 28.50, 35.00),
+  ('pao-fermentacao', 'Pão de Fermentação Natural', 'bosque', 19.90, 24.00),
+  ('torta-limao', 'Torta de Limão Siciliano', 'lume', 24.90, 30.00),
+  ('feijoada-completa', 'Feijoada Completa', 'recanto', 32.90, 64.00),
+  ('hamburguer-artesanal', 'Hambúrguer Artesanal de Cordeiro', 'bufalo', 26.90, 41.00),
+  ('bowl-vegetariano', 'Bowl Vegetariano de Grãos', 'verde', 22.90, 33.00),
+  ('mousse-chocolate', 'Mousse de Chocolate 70%', 'lume', 18.90, 27.00)
+on conflict (id) do update set titulo = excluded.titulo, chef_id = excluded.chef_id,
+  preco = excluded.preco, valor_kit = excluded.valor_kit;
+
 -- avisa a API do Supabase para reconhecer as funções novas
 notify pgrst, 'reload schema';
+commit;

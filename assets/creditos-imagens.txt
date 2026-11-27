@@ -1,0 +1,40 @@
+GastroMatch — Créditos das imagens
+
+Cópias WebP redimensionadas a partir de imagens do Wikimedia Commons.
+A licença indicada para cada imagem também se aplica à cópia redimensionada.
+
+hero.webp — Swastiverma (CC BY-SA 3.0)
+https://commons.wikimedia.org/wiki/File:Fine_Dining.jpg
+https://creativecommons.org/licenses/by-sa/3.0/
+
+kitchen.webp — Alex Proimos (CC BY 2.0)
+https://commons.wikimedia.org/wiki/File:Chefs_in_the_Kitchen_(6948413018).jpg
+https://creativecommons.org/licenses/by/2.0/
+
+risoto.webp — Number55 (CC BY-SA 3.0)
+https://commons.wikimedia.org/wiki/File:Risotto_ai_funghi_porcini.JPG
+https://creativecommons.org/licenses/by-sa/3.0/
+
+tagliatelle.webp — Petar Milošević (CC BY-SA 4.0)
+https://commons.wikimedia.org/wiki/File:Tagliatelle_al_ragu_Bolognese.jpg
+https://creativecommons.org/licenses/by-sa/4.0/
+
+cordeiro.webp — Acabashi (CC BY-SA 4.0)
+https://commons.wikimedia.org/wiki/File:Rack_of_lamb_cutlets_dinner_at_Black_Horse_Inn,_West_Sussex,_England.jpg
+https://creativecommons.org/licenses/by-sa/4.0/
+
+curry.webp — Guilhem Vellut (CC BY 2.0)
+https://commons.wikimedia.org/wiki/File:Green_Curry,_Siam_House,_Paris_001.jpg
+https://creativecommons.org/licenses/by/2.0/
+
+pao.webp — Agelaia (CC BY 4.0)
+https://commons.wikimedia.org/wiki/File:Sourdough_Bread_Loaf.jpg
+https://creativecommons.org/licenses/by/4.0/
+
+torta.webp — alpha (CC BY 2.5)
+https://commons.wikimedia.org/wiki/File:Lemon_tart_(cropped).jpg
+https://creativecommons.org/licenses/by/2.5/
+
+feijoada.webp — Andre Rebeiro (CC BY 2.0)
+https://commons.wikimedia.org/wiki/File:Feijoada_completa.jpg
+https://creativecommons.org/licenses/by/2.0/

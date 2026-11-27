@@ -10,8 +10,7 @@
 
 const API = (() => {
   const KEY = 'gm-db-v1', TOKEN = 'gm-token';
-  const CUPONS = { GASTRO10: 0.10, CHEF20: 0.20 };
-  const ASSINATURA = 29;
+  const { CUPONS, ASSINATURA } = Checkout;
   let db, mem = null, base = (typeof window !== 'undefined' && window.GM_API_BASE) || null, sbMode = false;
 
   /* ---------- util ---------- */
@@ -49,9 +48,9 @@ const API = (() => {
     try{ const c = new AbortController(); setTimeout(() => c.abort(), 1500); const r = await fetch('/api/health', { signal:c.signal }); if(r.ok && (await r.json()).ok) base = '/api'; }catch(e){}
   }
   async function init(){
-    /* Supabase: se estiver configurado e o banco responder, usa ele; senão cai para servidor/local */
-    if(typeof SB !== 'undefined' && SB.enabled()){ sbMode = await SB.init(); if(sbMode) return; }
+    // O servidor configurado ou da própria origem precede o Supabase.
     await detect(); if(base) return;
+    if(typeof SB !== 'undefined' && SB.enabled()){ sbMode = await SB.init(); if(sbMode) return; }
     try{ db = JSON.parse(localStorage.getItem(KEY)); }catch(e){}
     if(!db && mem) db = JSON.parse(mem);
     if(!db || !db.users){ db = await seed(); save(); }
@@ -148,7 +147,7 @@ const API = (() => {
     save(); setToken(null); return {};
   });
 
-  route('GET', '/recipes', async () => ({ recipes: db.recipes.filter(r => r.status === 'publicada'), creators: db.creators.filter(c => c.status === 'APROVADO').map(c => ({ chefId:c.chefId, raio:c.raio, name:(db.users.find(u => u.id === c.userId) || { name:c.nome }).name })) }));
+  route('GET', '/recipes', async () => ({ recipes: db.recipes.filter(r => r.status === 'publicada' && db.creators.some(c => c.chefId === r.chefId && c.status === 'APROVADO')), creators: db.creators.filter(c => c.status === 'APROVADO').map(c => ({ chefId:c.chefId, raio:c.raio, name:(db.users.find(u => u.id === c.userId) || { name:c.nome }).name })) }));
   const recipeBody = b => {
     if(!(b.name || '').trim()) fail(422, 'Informe o título da receita.');
     if(!(Number(b.price) > 0)) fail(422, 'Informe um preço de acesso maior que zero.');
@@ -178,26 +177,20 @@ const API = (() => {
   route('POST', '/checkout', async b => {
     const u = needUser();
     if(u.kind !== 'amador') fail(403, 'Contas de criador e administrador não realizam compras.');
-    const price = Number(b.amount) || 0; if(!(price > 0)) fail(422, 'Valor inválido.');
-    let valor = price;
-    if(b.cupom){ const d = CUPONS[String(b.cupom).trim().toUpperCase()]; if(d === undefined) fail(422, 'Cupom inválido.'); valor = +(price * (1 - d)).toFixed(2); }
-    if(b.type === 'kit'){
-      if(!b.termo) fail(422, 'É obrigatório aceitar as normas da Vigilância Sanitária para prosseguir.');
-      if(b.entrega !== 'retirada'){
-        const raio = (db.creators.find(c => c.chefId === b.chefId) || {}).raio || 5, d = distanceKm(String(b.cep || ''), b.chefId);
-        if(d === null) fail(422, 'Informe um CEP válido.');
-        if(d > raio) fail(422, 'Endereço fora do raio de entrega. Escolha retirar no estabelecimento.');
-      }
-    }
+    const { refId, chefId, recipeName, valor, cupom } = Checkout.resolve(b,
+      id => db.recipes.find(r => r.id === id && r.status === 'publicada'),
+      id => db.creators.find(c => c.chefId === id && c.status === 'APROVADO'),
+      fail, distanceKm);
     const metodo = b.metodo === 'pix' ? 'pix' : 'cartao';
-    const recusado = metodo === 'cartao' && (!/^\d{13,19}$/.test((b.card || '').replace(/\s/g, '')) || /0000$/.test((b.card || '').replace(/\s/g, '')));
-    const tx = { id: nextId('tx'), userId:u.id, type:b.type, refId:b.refId, chefId:b.chefId, valor, metodo, cupom: b.cupom || '', status: recusado ? 'RECUSADA' : 'APROVADA', http: recusado ? 402 : 200, date: today() };
+    const card = String(b.card || '').replace(/\s/g, '');
+    const recusado = metodo === 'cartao' && (!/^\d{13,19}$/.test(card) || /0000$/.test(card));
+    const tx = { id: nextId('tx'), userId:u.id, type:b.type, refId, chefId, valor, metodo, cupom, status: recusado ? 'RECUSADA' : 'APROVADA', http: recusado ? 402 : 200, date: today() };
     db.tx.push(tx);
     if(recusado){ save(); fail(402, 'Transação não autorizada. Tente outro cartão ou PIX.'); }
-    if(b.type === 'receita' && !db.access.some(a => a.userId === u.id && a.recipeId === b.refId)) db.access.push({ userId:u.id, recipeId:b.refId, txId:tx.id });
-    if(b.type === 'assinatura' && !db.subs.some(s => s.userId === u.id && s.chefId === b.chefId)) db.subs.push({ userId:u.id, chefId:b.chefId, txId:tx.id });
+    if(b.type === 'receita' && !db.access.some(a => a.userId === u.id && a.recipeId === refId)) db.access.push({ userId:u.id, recipeId:refId, txId:tx.id });
+    if(b.type === 'assinatura' && !db.subs.some(s => s.userId === u.id && s.chefId === chefId)) db.subs.push({ userId:u.id, chefId, txId:tx.id });
     let order = null;
-    if(b.type === 'kit'){ order = { id: nextId('order'), userId:u.id, buyer:u.name, recipeId:b.refId, recipeName:b.recipeName, chefId:b.chefId, valor, entrega:b.entrega, slot:b.slot, cep:b.cep || '', status:'AGUARDANDO', date: today() }; db.orders.push(order); }
+    if(b.type === 'kit'){ order = { id: nextId('order'), userId:u.id, buyer:u.name, recipeId:refId, recipeName, chefId, valor, entrega:b.entrega, slot:b.slot, cep:b.cep || '', status:'AGUARDANDO', date: today() }; db.orders.push(order); }
     save(); return { tx, order };
   });
 

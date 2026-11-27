@@ -1,0 +1,17 @@
+sequenceDiagram
+  actor U as Usuário
+  participant UI as Tela de login
+  participant API as API Node ou Supabase Auth
+  participant DB as Banco
+  U->>UI: Informa e-mail e senha
+  UI->>API: Solicita autenticação
+  API->>DB: Localiza conta e valida hash
+  alt Credenciais válidas
+    API-->>UI: Token de sessão
+    UI->>API: Consulta perfil e permissões
+    API-->>UI: Perfil e atividade
+    UI-->>U: Abre a área do perfil
+  else Credenciais inválidas
+    API-->>UI: Falha de autenticação
+    UI-->>U: Exibe erro de login
+  end

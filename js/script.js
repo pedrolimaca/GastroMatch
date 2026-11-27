@@ -1,15 +1,15 @@
 /* ---------------- DATA ---------------- */
 const IMG = {
-  hero: 'https://commons.wikimedia.org/wiki/Special:FilePath/Fine_Dining.jpg',
+  hero: 'assets/hero.webp',
   mise: 'https://commons.wikimedia.org/wiki/Special:FilePath/Green_curry_ingredients.jpg',
-  kitchen: 'https://commons.wikimedia.org/wiki/Special:FilePath/Chefs_in_the_Kitchen_(6948413018).jpg',
-  risoto: 'https://commons.wikimedia.org/wiki/Special:FilePath/Risotto_ai_funghi_porcini.JPG',
-  tagliatelle: 'https://commons.wikimedia.org/wiki/Special:FilePath/Tagliatelle_al_ragu_Bolognese.jpg',
-  cordeiro: 'https://commons.wikimedia.org/wiki/Special:FilePath/Rack_of_lamb_cutlets_dinner_at_Black_Horse_Inn,_West_Sussex,_England.jpg',
-  curry: 'https://commons.wikimedia.org/wiki/Special:FilePath/Green_Curry,_Siam_House,_Paris_001.jpg',
-  pao: 'https://commons.wikimedia.org/wiki/Special:FilePath/Sourdough_Bread_Loaf.jpg',
-  torta: 'https://commons.wikimedia.org/wiki/Special:FilePath/Lemon_tart_(cropped).jpg',
-  feijoada: 'https://commons.wikimedia.org/wiki/Special:FilePath/Feijoada_completa.jpg',
+  kitchen: 'assets/kitchen.webp',
+  risoto: 'assets/risoto.webp',
+  tagliatelle: 'assets/tagliatelle.webp',
+  cordeiro: 'assets/cordeiro.webp',
+  curry: 'assets/curry.webp',
+  pao: 'assets/pao.webp',
+  torta: 'assets/torta.webp',
+  feijoada: 'assets/feijoada.webp',
   burger: 'https://commons.wikimedia.org/wiki/Special:FilePath/Lamb_Burger_with_Fries_and_Aioli.jpg',
   mousse: 'https://commons.wikimedia.org/wiki/Special:FilePath/Chocolate_Mousse.jpg',
   bowl: 'https://commons.wikimedia.org/wiki/Special:FilePath/BuddhaBowlLot.jpg',
@@ -54,44 +54,49 @@ const chefs = {
     cover: IMG.bowl },
 };
 
+function demoRecipe(id){
+  const recipe = Checkout.demoRecipe(id);
+  return { ...recipe, chef:recipe.chefId };
+}
+
 const recipes = [
-  { id:'risoto-funghi', name:'Risoto de Funghi Porcini', chef:'torino', time:'45 min', difficulty:'média', portions:'2 pessoas', price:34.90, rating:4.8, reviews:312, kitPrice:46.00, kitsLeft:4, img:IMG.risoto, restricao:'sem restrição',
+  { ...demoRecipe('risoto-funghi'), time:'45 min', difficulty:'média', portions:'2 pessoas', rating:4.8, reviews:312, kitsLeft:4, img:IMG.risoto, restricao:'sem restrição',
     kit:[['Arroz arbóreo','200g'],['Funghi porcini seco','15g'],['Caldo de legumes artesanal','500ml'],['Parmesão ralado na hora','60g'],['Manteiga e vinho branco','1 dose']],
     instrucoes:['Hidrate o funghi porcini em água morna por 15 min e reserve o líquido.','Refogue a cebola na manteiga até ficar translúcida.','Adicione o arroz arbóreo e toste por 2 min.','Vá adicionando o caldo quente aos poucos, mexendo sempre.','Finalize com o funghi picado, parmesão e um fio de azeite.'],
     testi:{quote:'Segui certinho e ficou idêntico ao prato do restaurante.', name:'Camila R.'} },
-  { id:'tagliatelle-ragu', name:'Tagliatelle ao Ragu', chef:'torino', time:'1h10', difficulty:'fácil', portions:'2 pessoas', price:27.90, rating:4.7, reviews:184, kitPrice:38.00, kitsLeft:6, img:IMG.tagliatelle, restricao:'sem restrição',
+  { ...demoRecipe('tagliatelle-ragu'), time:'1h10', difficulty:'fácil', portions:'2 pessoas', rating:4.7, reviews:184, kitsLeft:6, img:IMG.tagliatelle, restricao:'sem restrição',
     kit:[['Tagliatelle fresco','250g'],['Molho ragu de carne','400g'],['Parmesão ralado na hora','50g'],['Manjericão fresco','1 maço']],
     instrucoes:['Cozinhe o tagliatelle fresco em água fervente com sal por 3 min.','Aqueça o ragu em fogo baixo até ferver suavemente.','Escorra a massa e misture ao molho na panela.','Sirva com parmesão ralado e manjericão fresco por cima.'],
     testi:{quote:'O molho pronto no kit foi o diferencial, não precisei correr atrás de nada.', name:'Bruno S.'} },
-  { id:'cordeiro-porto', name:'Cordeiro ao Vinho do Porto', chef:'renato', time:'2h20', difficulty:'difícil', portions:'2 pessoas', price:42.00, rating:4.9, reviews:96, kitPrice:68.00, kitsLeft:2, img:IMG.cordeiro, restricao:'sem glúten',
+  { ...demoRecipe('cordeiro-porto'), time:'2h20', difficulty:'difícil', portions:'2 pessoas', rating:4.9, reviews:96, kitsLeft:2, img:IMG.cordeiro, restricao:'sem glúten',
     kit:[['Pernil de cordeiro','600g'],['Vinho do Porto','200ml'],['Batatas rústicas','400g'],['Ervas frescas','1 maço']],
     instrucoes:['Tempere o cordeiro com sal, pimenta e ervas frescas.','Sele a carne em fogo alto até dourar todos os lados.','Deglace com o vinho do Porto e deixe reduzir.','Leve ao forno a 160°C por 1h30 com as batatas.','Deixe descansar 10 min antes de fatiar.'],
     testi:{quote:'Achei que fosse complicado, mas o passo a passo em vídeo resolveu tudo.', name:'Diego F.'} },
-  { id:'curry-verde', name:'Curry Verde Tailandês', chef:'siam', time:'50 min', difficulty:'média', portions:'2 pessoas', price:28.50, rating:4.6, reviews:145, kitPrice:35.00, kitsLeft:5, img:IMG.curry, restricao:'sem glúten',
+  { ...demoRecipe('curry-verde'), time:'50 min', difficulty:'média', portions:'2 pessoas', rating:4.6, reviews:145, kitsLeft:5, img:IMG.curry, restricao:'sem glúten',
     kit:[['Pasta de curry verde','80g'],['Leite de coco','400ml'],['Frango em cubos','300g'],['Berinjela tailandesa','150g']],
     instrucoes:['Refogue a pasta de curry verde até soltar aroma.','Adicione o leite de coco aos poucos, mexendo bem.','Junte o frango e cozinhe até dourar por fora.','Acrescente a berinjela e cozinhe por 10 min.','Ajuste o sal e sirva com arroz jasmim.'],
     testi:{quote:'Pasta de curry fresquinha, muito mais saborosa que a de mercado.', name:'Larissa T.'} },
-  { id:'pao-fermentacao', name:'Pão de Fermentação Natural', chef:'bosque', time:'3h + fermentação', difficulty:'fácil', portions:'1 pão grande', price:19.90, rating:4.9, reviews:401, kitPrice:24.00, kitsLeft:8, img:IMG.pao, restricao:'vegano',
+  { ...demoRecipe('pao-fermentacao'), time:'3h + fermentação', difficulty:'fácil', portions:'1 pão grande', rating:4.9, reviews:401, kitsLeft:8, img:IMG.pao, restricao:'vegano',
     kit:[['Farinha especial','500g'],['Fermento natural (levain)','100g'],['Sal marinho','10g']],
     instrucoes:['Misture a farinha, o levain, o sal e a água até formar uma massa homogênea.','Deixe descansar 30 min e faça as primeiras dobras.','Repita as dobras a cada 30 min por 2h.','Modele e deixe fermentar na geladeira por 8-12h.','Asse em forno bem quente com vapor por 40 min.'],
     testi:{quote:'Meu levain nunca tinha funcionado até eu comprar o kit certo.', name:'Marcos V.'} },
-  { id:'torta-limao', name:'Torta de Limão Siciliano', chef:'lume', time:'1h + geladeira', difficulty:'fácil', portions:'8 fatias', price:24.90, rating:4.8, reviews:210, kitPrice:30.00, kitsLeft:3, img:IMG.torta, restricao:'vegetariano',
+  { ...demoRecipe('torta-limao'), time:'1h + geladeira', difficulty:'fácil', portions:'8 fatias', rating:4.8, reviews:210, kitsLeft:3, img:IMG.torta, restricao:'vegetariano',
     kit:[['Massa sablée pronta','1 disco'],['Limão siciliano','4 un'],['Leite condensado','1 lata'],['Claras para merengue','4 un']],
     instrucoes:['Pré-asse a massa sablée por 12 min a 180°C.','Bata o leite condensado com o suco e raspas de limão.','Despeje o recheio sobre a massa e leve à geladeira por 2h.','Bata as claras em neve para o merengue e finalize com maçarico.'],
     testi:{quote:'Kit chegou super fresco, só faltou eu ter mais paciência com o merengue.', name:'Ana P.'} },
-  { id:'feijoada-completa', name:'Feijoada Completa', chef:'recanto', time:'3h', difficulty:'média', portions:'4 pessoas', price:32.90, rating:4.9, reviews:268, kitPrice:64.00, kitsLeft:5, img:IMG.feijoada, restricao:'sem glúten',
+  { ...demoRecipe('feijoada-completa'), time:'3h', difficulty:'média', portions:'4 pessoas', rating:4.9, reviews:268, kitsLeft:5, img:IMG.feijoada, restricao:'sem glúten',
     kit:[['Feijão preto selecionado','500g'],['Carnes defumadas variadas','700g'],['Linguiça artesanal','300g'],['Couve fresca','1 maço'],['Farinha de mandioca torrada','200g']],
     instrucoes:['Deixe o feijão de molho por 4h e cozinhe na panela de pressão.','Refogue as carnes defumadas e a linguiça em fogo médio.','Junte tudo ao feijão e cozinhe por 1h30 em fogo baixo.','Refogue a couve fatiada fina na hora de servir.','Sirva com farinha torrada e arroz branco.'],
     testi:{quote:'Gostinho de comida de vó, sem passar o domingo inteiro na cozinha.', name:'Rafael M.'} },
-  { id:'hamburguer-artesanal', name:'Hambúrguer Artesanal de Cordeiro', chef:'bufalo', time:'35 min', difficulty:'fácil', portions:'2 pessoas', price:26.90, rating:4.7, reviews:157, kitPrice:41.00, kitsLeft:7, img:IMG.burger, restricao:'sem restrição',
+  { ...demoRecipe('hamburguer-artesanal'), time:'35 min', difficulty:'fácil', portions:'2 pessoas', rating:4.7, reviews:157, kitsLeft:7, img:IMG.burger, restricao:'sem restrição',
     kit:[['Blend de cordeiro moído','300g'],['Pão brioche artesanal','2 un'],['Molho aioli da casa','80g'],['Batata rústica congelada','300g']],
     instrucoes:['Modele os hambúrgueres sem apertar demais a carne.','Sele em chapa bem quente, 3 min de cada lado.','Toste o pão brioche na manteiga.','Monte com aioli, hambúrguer e acompanhamentos.','Sirva com a batata rústica assada.'],
     testi:{quote:'Melhor hambúrguer que já fiz em casa, o blend faz toda diferença.', name:'Pedro L.'} },
-  { id:'bowl-vegetariano', name:'Bowl Vegetariano de Grãos', chef:'verde', time:'30 min', difficulty:'fácil', portions:'2 pessoas', price:22.90, rating:4.8, reviews:132, kitPrice:33.00, kitsLeft:6, img:IMG.bowl, restricao:'vegano',
+  { ...demoRecipe('bowl-vegetariano'), time:'30 min', difficulty:'fácil', portions:'2 pessoas', rating:4.8, reviews:132, kitsLeft:6, img:IMG.bowl, restricao:'vegano',
     kit:[['Quinoa cozida','200g'],['Legumes assados da estação','300g'],['Grão-de-bico temperado','150g'],['Molho tahine','60ml']],
     instrucoes:['Aqueça a quinoa e os legumes assados.','Monte o bowl distribuindo os ingredientes em seções.','Finalize com o grão-de-bico temperado por cima.','Regue com o molho tahine antes de servir.'],
     testi:{quote:'Colorido, leve e muito mais gostoso do que eu esperava.', name:'Beatriz C.'} },
-  { id:'mousse-chocolate', name:'Mousse de Chocolate 70%', chef:'lume', time:'25 min + geladeira', difficulty:'fácil', portions:'4 pessoas', price:18.90, rating:4.9, reviews:189, kitPrice:27.00, kitsLeft:6, img:IMG.mousse, restricao:'vegetariano',
+  { ...demoRecipe('mousse-chocolate'), time:'25 min + geladeira', difficulty:'fácil', portions:'4 pessoas', rating:4.9, reviews:189, kitsLeft:6, img:IMG.mousse, restricao:'vegetariano',
     kit:[['Chocolate 70% em gotas','200g'],['Creme de leite fresco','300ml'],['Ovos caipiras','3 un'],['Flor de sal','1 pitada']],
     instrucoes:['Derreta o chocolate em banho-maria.','Bata as claras em neve e o creme de leite em chantilly separadamente.','Misture as gemas ao chocolate morno.','Incorpore delicadamente o chantilly e depois as claras.','Leve à geladeira por pelo menos 3h antes de servir.'],
     testi:{quote:'Textura aerada, muito diferente da mousse de pacotinho.', name:'Isabela G.'} },
@@ -106,7 +111,8 @@ const categories = [
   { key:'sobremesas', label:'Sobremesas', img:IMG.mousse, recipe:'mousse-chocolate' },
 ];
 
-const recipeById = id => recipes.find(r => r.id === id) || (window.draftRecipes || []).find(r => r.id === id) || recipes[0];
+const findRecipe = id => recipes.find(r => r.id === id) || window.draftRecipes.find(r => r.id === id);
+const recipeById = id => findRecipe(id) || recipes[0];
 const brl = n => 'R$ ' + n.toFixed(2).replace('.', ',');
 const AVATAR_TONES = ['var(--brick)','var(--olive)','var(--yolk)','#6b5b3e'];
 const STARS5 = '★★★★★';
@@ -155,12 +161,11 @@ function goToTab(page){ currentPage=page; currentId=null; pushHistory(page,null)
 function goBack(){
   try{ history.back(); }catch(e){ currentPage='home'; currentId=null; render(); }
 }
-window.addEventListener('popstate', (e)=>{
-  const st = e.state;
-  if(st){ currentPage = st.page; currentId = st.id; }
-  else { currentPage = 'home'; currentId = null; }
-  render();
-});
+function readLocation(){
+  const [page, id = null, ...extra] = location.hash.slice(1).split('/');
+  currentPage = !extra.length && Object.hasOwn(pageRenderers, page) ? page : 'home';
+  currentId = id;
+}
 
 function navScroll(anchorId){
   if(currentPage!=='home'){ goToTab('home'); setTimeout(()=>scrollToAnchor(anchorId), 120); }
@@ -291,13 +296,14 @@ function toggleSearch(open){ const el = document.getElementById('searchSuggest')
 
 /* ---------------- SMALL PARTIALS ---------------- */
 function photoHtml(url, badge){
-  return '<div class="photo-img" style="background-image:url(\'' + url + '\')"></div><div class="photo-shade"></div>' + (badge ? '<span class="badge">'+badge+'</span>' : '');
+  const style = 'background-image:url(' + JSON.stringify(String(url || '')) + ')';
+  return '<div class="photo-img" style="' + esc(style) + '"></div><div class="photo-shade"></div>' + (badge ? '<span class="badge">'+badge+'</span>' : '');
 }
 function avatarHtml(name, size){
   const initial = name.trim().charAt(0).toUpperCase();
   let sum=0; for(const ch of name) sum += ch.charCodeAt(0);
   const tone = AVATAR_TONES[sum % AVATAR_TONES.length];
-  return '<div class="post-avatar" style="background:'+tone+'; width:'+size+'px; height:'+size+'px; font-size:'+Math.round(size*.42)+'px">'+initial+'</div>';
+  return '<div class="post-avatar" style="background:'+tone+'; width:'+size+'px; height:'+size+'px; font-size:'+Math.round(size*.42)+'px">'+esc(initial)+'</div>';
 }
 function ratingHtml(rating, reviews){ return '<span class="rating"><span class="stars">★</span>'+rating+(reviews?' <span style="opacity:.75">('+reviews+')</span>':'')+'</span>'; }
 function heartHtml(id){
@@ -459,7 +465,7 @@ function renderHome(){
 function videoPanelHtml(r){
   const url = (r.video || IMG.heroVideo || '').trim();
   const lock = '<svg class="icon" style="width:13px;height:13px" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="1"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>';
-  if(/\.(mp4|webm|ogg)(\?|$)/i.test(url)) return `<video class="hero-photo" style="height:220px" controls controlsList="nodownload noremoteplayback" disablePictureInPicture oncontextmenu="return false" poster="${r.img}" src="${esc(url)}"></video><p class="video-locked-note">${lock} vídeo protegido - download desabilitado</p>`;
+  if(/^https?:\/\//i.test(url) && /\.(mp4|webm|ogg)(\?|$)/i.test(url)) return `<video class="hero-photo" style="height:220px" controls controlsList="nodownload noremoteplayback" disablePictureInPicture oncontextmenu="return false" poster="${esc(r.img)}" src="${esc(url)}"></video><p class="video-locked-note">${lock} Videoaula em reprodução</p>`;
   if(/^https?:\/\//i.test(url)) return `<div class="locked-box"><b>Videoaula liberada</b>O chef publicou a aula em um link externo.<br><a class="link-inline" href="${esc(url)}" target="_blank" rel="noopener">Assistir à videoaula</a></div>`;
   return '<div class="locked-box"><b>Videoaula em breve</b>O chef ainda não publicou o vídeo desta receita. Enquanto isso, siga o passo a passo na aba Receita.</div>';
 }
@@ -467,8 +473,14 @@ function videoPanelHtml(r){
 /* -------- RF03: comercialização flexível -------- */
 function isRecipeUnlocked(r){ return unlockedRecipes.has(r.id) || subscribedChefs.has(r.chef) || ownsRecipe(r); }
 
+function unavailableRecipe(message){
+  return `<div class="auth-wrap"><div class="auth-card"><h1 class="auth-title">${message}</h1>
+    <button class="auth-submit" onclick="goToTab('recipes')">Ver catálogo</button></div></div>`;
+}
+
 function renderRecipe(id){
-  const r = recipeById(id);
+  const r = findRecipe(id);
+  if(!r) return unavailableRecipe('Receita indisponível');
   const c = chefs[r.chef];
   const unlocked = isRecipeUnlocked(r);
   const bodyHtml = unlocked ? `
@@ -500,14 +512,14 @@ function renderRecipe(id){
       <div class="tab-panel" data-p="avaliacoes" hidden>${reviewsHtml(r)}</div>
     </div>
     <div class="purchase-panel">
-      <div class="buy-row"><div><span class="lab">Desbloquear receita</span><span class="sub">vídeo com marca d'água, sem download</span></div>${unlocked ? '<span style="color:var(--olive);font-family:\'Public Sans\',sans-serif;font-size:11px">liberado</span>' : `<button class="tiny-btn" onclick="buyRecipe('${r.id}')">${brl(r.price)}</button>`}</div>
-      <div class="buy-row"><div><span class="lab">Assinar ${c.name}</span><span class="sub">catálogo completo, mensal</span></div>${subscribedChefs.has(r.chef) ? '<span style="color:var(--olive);font-family:\'Public Sans\',sans-serif;font-size:11px">assinante</span>' : `<button class="tiny-btn" onclick="subscribeChef('${r.chef}')">R$ 29/mês</button>`}</div>
-      <div class="buy-row"><div><span class="lab">Pedir kit de ingredientes</span><span class="sub">entrega em até ${c.radius}, disponível</span><span class="scarcity">restam ${r.kitsLeft} kits para entrega hoje</span></div><button class="tiny-btn" onclick="requireLogin(()=>goTo('checkout','${r.id}'))">pedir</button></div>
-      <div class="panel-guarantee"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>Satisfação garantida: reembolso em até 7 dias</div>
+      <div class="buy-row"><div><span class="lab">Desbloquear receita</span><span class="sub">receita e videoaula, quando disponível</span></div>${unlocked ? '<span style="color:var(--olive);font-family:\'Public Sans\',sans-serif;font-size:11px">liberado</span>' : `<button class="tiny-btn" onclick="buyRecipe('${r.id}')">${brl(r.price)}</button>`}</div>
+      <div class="buy-row"><div><span class="lab">Assinar ${c.name}</span><span class="sub">acesso ao catálogo em modo de demonstração</span></div>${subscribedChefs.has(r.chef) ? '<span style="color:var(--olive);font-family:\'Public Sans\',sans-serif;font-size:11px">assinante</span>' : `<button class="tiny-btn" onclick="subscribeChef('${r.chef}')">R$ 29 · simulação</button>`}</div>
+      ${r.kitPrice > 0 ? `<div class="buy-row"><div><span class="lab">Pedir kit de ingredientes</span><span class="sub">entrega em até ${c.radius}, disponível</span></div><button class="tiny-btn" onclick="requireLogin(()=>goTo('checkout','${r.id}'))">pedir</button></div>` : ''}
+      <div class="panel-guarantee"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>Pagamento simulado. Nenhum valor é cobrado.</div>
     </div>
   </div>
   </div>
-  <div class="sticky-cta"><div class="sp"><small>kit de ingredientes</small><b>${brl(r.kitPrice)}</b></div><button onclick="requireLogin(()=>goTo('checkout','${r.id}'))">Pedir agora</button></div>
+  ${r.kitPrice > 0 ? `<div class="sticky-cta"><div class="sp"><small>kit de ingredientes</small><b>${brl(r.kitPrice)}</b></div><button onclick="requireLogin(()=>goTo('checkout','${r.id}'))">Pedir agora</button></div>` : ''}
   `;
 }
 
@@ -519,51 +531,67 @@ function loadJsPDF(){
   jspdfLoading = new Promise((resolve, reject)=>{
     const s = document.createElement('script');
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-    s.onload = resolve; s.onerror = reject;
+    s.onload = resolve;
+    s.onerror = () => { jspdfLoading = null; s.remove(); reject(new Error('Biblioteca PDF indisponível.')); };
     document.head.appendChild(s);
   });
   return jspdfLoading;
 }
 function downloadFichaPdf(id){
-  const r = recipeById(id);
-  const c = chefs[r.chef];
-  const email = currentUser ? currentUser.email : 'convidado@gastromatch.com';
+  const r = findRecipe(id);
+  if(!r || !currentUser || !isRecipeUnlocked(r)){
+    showToast('Entre com uma conta que tenha acesso à receita.');
+    return;
+  }
+  const c = chefs[r.chef], email = currentUser.email;
   loadJsPDF().then(()=>{
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    doc.setFont('helvetica','bold'); doc.setFontSize(18);
-    doc.text(r.name, 15, 20);
-    doc.setFontSize(11); doc.setFont('helvetica','normal');
-    doc.text('por ' + c.person + ', ' + c.name, 15, 28);
-    doc.text('Tempo: ' + r.time + '   Rende: ' + r.portions, 15, 36);
-    doc.setFont('helvetica','bold'); doc.text('Ingredientes', 15, 48);
-    doc.setFont('helvetica','normal');
-    let y = 55;
-    r.kit.forEach(i=>{ doc.text('• ' + i[0] + ' - ' + i[1], 17, y); y += 7; });
+    const plain = html => {
+      const el = document.createElement('textarea');
+      el.innerHTML = html;
+      return el.value;
+    };
+    let y = 20;
+    function write(value, size = 11, weight = 'normal', x = 15){
+      doc.setFont('helvetica',weight);
+      doc.setFontSize(size);
+      const lines = doc.splitTextToSize(plain(value), 180 - (x - 15));
+      for(const line of lines){
+        if(y > 268){ doc.addPage(); y = 20; }
+        doc.text(line, x, y);
+        y += size > 12 ? 9 : 6;
+      }
+    }
+    write(r.name, 18, 'bold');
+    write('por ' + c.person + ', ' + c.name);
+    write('Tempo: ' + r.time + '   Rende: ' + r.portions);
     y += 5;
-    doc.setFont('helvetica','bold'); doc.text('Modo de preparo', 15, y); y += 7;
-    doc.setFont('helvetica','normal');
-    r.instrucoes.forEach((s,idx)=>{
-      const lines = doc.splitTextToSize((idx+1)+'. '+s, 175);
-      doc.text(lines, 17, y); y += 6*lines.length;
-    });
-    // marca d'água dinâmica vinculada ao usuário (RNF03)
-    const pages = doc.internal.getNumberOfPages();
-    for(let p=1;p<=pages;p++){
-      doc.setPage(p);
-      doc.setFontSize(9); doc.setTextColor(160,160,160);
-      doc.text('Baixado por: ' + email + ', GastroMatch © ' + new Date().getFullYear(), 15, 289);
-      doc.saveGraphicsState && doc.saveGraphicsState();
-      doc.setFontSize(46); doc.setTextColor(230,230,230);
-      doc.text('GASTROMATCH, ' + email, 30, 160, { angle: 35 });
+    write('Ingredientes', 11, 'bold');
+    r.kit.forEach(([item, quantity]) => write('• ' + item + (quantity ? ' - ' + quantity : ''), 11, 'normal', 17));
+    y += 5;
+    write('Modo de preparo', 11, 'bold');
+    r.instrucoes.forEach((step, index) => write((index + 1) + '. ' + step, 11, 'normal', 17));
+    // Marca d'água e identificação em todas as páginas.
+    for(let page = 1; page <= doc.internal.getNumberOfPages(); page++){
+      doc.setPage(page);
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text('Baixado por: ' + email, 15, 286, { maxWidth:180 });
+      doc.setFontSize(31);
+      doc.setTextColor(212);
+      doc.text('GASTROMATCH', 63, 176, { angle:35 });
+      doc.setFontSize(13);
+      doc.text(email, 68, 183, { angle:35, maxWidth:115 });
     }
     doc.save(r.id + '-ficha.pdf');
-    showToast("Ficha em PDF baixada com marca d'água do seu usuário.");
-  }).catch(()=>showToast('Não foi possível gerar o PDF agora - verifique sua conexão.'));
+    showToast('Ficha em PDF baixada com identificação da sua conta.');
+  }).catch(()=>showToast('Não foi possível gerar o PDF agora. Verifique sua conexão e tente novamente.'));
 }
 
 function renderChef(id){
-  const c = chefs[id];
+  const c = Object.hasOwn(chefs, id) && chefs[id];
+  if(!c) return unavailableRecipe('Criador indisponível');
   const catalog = recipes.filter(r=>r.chef===id);
   return `<div class="wrap" style="padding-top:120px">
   <button class="back-link" onclick="goBack()"><svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> voltar</button>
@@ -585,9 +613,14 @@ function checkCep(recipeId){
   const cepInput = document.getElementById('cepInput');
   const cep = (cepInput.value||'').replace(/\D/g,'').slice(0,8);
   const resultBox = document.getElementById('geoResult');
-  if(cep.length < 8){ resultBox.innerHTML = '<div class="field-error">Digite um CEP válido (8 dígitos).</div>'; return; }
   const radiusKm = parseFloat(c.radius) || 5;
   const dist = pseudoDistanceKm(cep, r.chef);
+  if(dist === null){
+    resultBox.innerHTML = '<div class="field-error">Digite um CEP válido (8 dígitos).</div>';
+    document.getElementById('kitBuyBtn').style.display='none';
+    document.getElementById('outOfRangeBox').style.display='none';
+    return;
+  }
   const ok = dist <= radiusKm;
   if(ok){
     resultBox.innerHTML = `<div class="geo-ok"><span class="geo-dot"></span> dentro do raio de ${c.radius} de ${c.name} (~${dist} km)</div>`;
@@ -599,6 +632,9 @@ function checkCep(recipeId){
     document.getElementById('outOfRangeBox').style.display='';
   }
 }
+function refreshKitDelivery(recipeId){
+  if(!document.querySelector('#kitSlots [data-pickup].on')) checkCep(recipeId);
+}
 function allowPickup(){
   const resultBox = document.getElementById('geoResult');
   resultBox.innerHTML = '<div class="geo-ok"><span class="geo-dot"></span> retirada no estabelecimento - sem validação de raio necessária</div>';
@@ -606,7 +642,8 @@ function allowPickup(){
   document.getElementById('outOfRangeBox').style.display='none';
 }
 function renderCheckout(id){
-  const r = recipeById(id);
+  const r = recipes.find(recipe => recipe.id === id);
+  if(!r || r.kitPrice <= 0) return unavailableRecipe('Kit indisponível para esta receita');
   const c = chefs[r.chef];
   return `<div class="wrap" style="padding-top:120px">
   <button class="back-link" onclick="goBack()"><svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> voltar</button>
@@ -615,14 +652,14 @@ function renderCheckout(id){
     <div class="checkout-main">
       <div class="addr-box">
         <div class="addr-top"><span>Endereço de entrega</span></div>
-        <div class="field" style="margin:10px 0 4px"><label>CEP</label><div style="display:flex;gap:8px"><input id="cepInput" placeholder="89200-000" style="padding:11px 13px;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:2px;flex:1"><button class="tiny-btn" onclick="checkCep('${r.id}')">verificar raio</button></div></div>
+        <div class="field" style="margin:10px 0 4px"><label>CEP</label><div style="display:flex;gap:8px"><input id="cepInput" inputmode="numeric" maxlength="9" placeholder="89200-000" oninput="refreshKitDelivery('${r.id}')" style="padding:11px 13px;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:2px;flex:1"><button class="tiny-btn" onclick="refreshKitDelivery('${r.id}')">verificar raio</button></div></div>
         <div id="geoResult"><div class="geo-ok"><span class="geo-dot"></span> informe o CEP para validar o raio de entrega de ${c.name} (${c.radius})</div></div>
         <div id="outOfRangeBox" style="display:none; margin-top:10px; font-size:12px; color:var(--ink-soft)">Você ainda pode <span class="link-inline" onclick="goTo('recipe','${r.id}')">comprar apenas a aula em vídeo</span> ou retirar no estabelecimento.</div>
       </div>
       <h3 style="font-family:'Fraunces',serif;font-size:16px;font-weight:500;margin:0 0 14px">Itens do kit</h3>
       ${r.kit.map(i=>'<div class="kit-line"><span>'+i[0]+'</span><span>'+i[1]+'</span></div>').join('')}
       <h3 style="font-family:'Fraunces',serif;font-size:16px;font-weight:500;margin:22px 0 14px">Entrega</h3>
-      <div class="chip-row"><div class="chip on" onclick="toggleChip(this)">Hoje, 18h–20h</div><div class="chip" onclick="toggleChip(this)">Amanhã, 12h–14h</div><div class="chip" onclick="toggleChip(this); allowPickup()">Retirar no local</div></div>
+      <div class="chip-row" id="kitSlots"><button class="chip on" type="button" onclick="toggleChip(this); refreshKitDelivery('${r.id}')">Hoje, 18h–20h</button><button class="chip" type="button" onclick="toggleChip(this); refreshKitDelivery('${r.id}')">Amanhã, 12h–14h</button><button class="chip" type="button" data-pickup onclick="toggleChip(this); allowPickup()">Retirar no local</button></div>
       <div class="terms-row"><input type="checkbox" id="terms"><label for="terms">Declaro ciência de que os ingredientes seguem as normas locais de Vigilância Sanitária para manipulação e transporte.</label></div>
     </div>
     <div class="order-summary">
@@ -630,7 +667,7 @@ function renderCheckout(id){
       <div class="kit-line" style="border-bottom:none"><span>Entrega</span><span>grátis</span></div>
       <div class="total-row"><span>Total</span><b>${brl(r.kitPrice)}</b></div>
       <button class="confirm-btn" id="kitBuyBtn" onclick="startKitPayment('${r.id}')" style="display:none">Confirmar pedido</button>
-      <div class="summary-guarantee">pagamento processado com segurança, satisfação garantida</div>
+      <div class="summary-guarantee">Pedido demonstrativo. Nenhum valor é cobrado.</div>
     </div>
   </div>
   </div>`;
@@ -816,5 +853,6 @@ window.addEventListener('resize', updateActiveTab);
 
 initTheme();
 { const vc = document.getElementById('videoCredit'); if(vc) vc.hidden = !IMG.heroVideo; }
-try{ history.replaceState({page:'home', id:null}, '', '#home'); }catch(e){}
+readLocation();
 bootstrap();
+window.addEventListener('popstate', () => { readLocation(); render(); });

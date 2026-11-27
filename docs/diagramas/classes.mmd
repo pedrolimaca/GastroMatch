@@ -1,0 +1,58 @@
+classDiagram
+  direction LR
+  class Usuario{
+    id
+    nome
+    email
+    perfil
+  }
+  class Criador{
+    chefId
+    statusValidacao
+    raioEntregaKm
+    termoAceito
+  }
+  class Receita{
+    id
+    titulo
+    preco
+    status
+    linkVideo
+  }
+  class Kit{
+    valor
+    composicao
+  }
+  class Transacao{
+    tipo
+    valor
+    metodo
+    status
+  }
+  class Pedido{
+    modalidade
+    janela
+    cep
+    status
+  }
+  class Publicacao{
+    legenda
+    estrelas
+    resposta
+  }
+  class Acesso{
+    receitaId
+  }
+  class Assinatura{
+    chefId
+  }
+  Usuario "0..1" -- "0..1" Criador : perfil
+  Criador "1" -- "*" Receita : publica
+  Receita "1" -- "0..1" Kit : oferece
+  Usuario "1" -- "*" Transacao : realiza
+  Usuario "1" -- "*" Pedido : solicita
+  Usuario "1" -- "*" Publicacao : publica
+  Usuario "1" -- "*" Acesso : possui
+  Usuario "1" -- "*" Assinatura : possui
+  Transacao "1" -- "0..1" Acesso : libera
+  Transacao "1" -- "0..1" Assinatura : ativa

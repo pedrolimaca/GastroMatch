@@ -1,0 +1,11 @@
+flowchart TD
+  S([Início]) --> A{Criador aprovado?}
+  A -- Não --> B["Exibir status e restringir publicação"] --> F([Fim])
+  A -- Sim --> C["Preencher título, preço e tempo; kit e vídeo opcionais"]
+  C --> D{Campos válidos?}
+  D -- Não --> C
+  D -- Sim --> E{Ação escolhida}
+  E -- Rascunho --> G["Salvar e manter apenas no painel"]
+  E -- Publicação --> H["Salvar e exibir no catálogo"]
+  G --> F
+  H --> F

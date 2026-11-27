@@ -1,48 +1,62 @@
-# Testes de usabilidade e evidências
+# Relatório de testes — Sprint 3
 
-## Testes automatizados
+**Data da revisão** — 27/11/2026
+**Ambientes** — Node.js 24.22.3, SQLite temporário, Chromium 156 / Playwright 1.62.1 e PostgreSQL local via PGlite 0.6.1 com Auth simulado.
 
-- `npm test`: 27 cenários de regra de negócio (cadastro, curadoria, publicação, pagamento 402, kit e raio, comunidade, perfil e exclusão de conta) e 15 testes do adaptador do Supabase, que usam um Supabase simulado. Resultado em `docs/evidencias-testes-api.txt` (modo local) e `docs/evidencias-testes-servidor-banco.txt` (contra o banco).
-- Auditoria de interface em navegador (Chromium): 20 telas em 360, 768 e 1280 px, sem rolagem lateral nem erros de console; categorias, busca por CEP, abas e publicação de receita verificadas.
-- Teste de interface em navegador simulado: login, filtros, dashboard, publicação, pagamento recusado e aprovado, modo cozinha, termo sanitário e curadoria (14 verificações, todas aprovadas).
+| Execução | Resultado | Evidência |
+|---|---|---|
+| Regras de negócio em armazenamento local | 28 cenários passaram | [Log](sprint-3/evidencias/local.txt) |
+| Adaptador Supabase com respostas simuladas | 15 cenários passaram | [Log](sprint-3/evidencias/local.txt) |
+| As mesmas regras de negócio na API Node, sobre SQLite | 28 cenários passaram | [Log](sprint-3/evidencias/sqlite.txt) |
+| SQL completo aplicado duas vezes, com catálogo, checkout e exclusão | Cinco grupos de verificações passaram | [Log](sprint-3/evidencias/postgres.txt) |
+| Chromium sobre SQLite | Cinco fluxos de interface passaram, sem erros de execução do JavaScript capturados | [Log](sprint-3/evidencias/chromium.txt) |
 
-## Roteiro manual (tirar os prints e salvar em `docs/prints/`)
+## Casos e evidências
 
-| # | Fluxo | Passos | Resultado esperado | Print |
-|---|---|---|---|---|
-| 1 | Cadastro amador | Criar conta com senha de 3 letras | Mensagem de senha mínima | 01-cadastro-erro.png |
-| 2 | Login inválido | Entrar com senha errada | "E-mail ou senha incorretos." | 02-login-erro.png |
-| 3 | Cadastro de chef | Enviar sem marcar o termo sanitário | Alerta da Vigilância Sanitária | 03-termo.png |
-| 4 | Chef pendente | Entrar como beatriz@email.com | Painel bloqueado, status PENDENTE | 04-pendente.png |
-| 5 | Curadoria | Entrar como admin e aprovar a Beatriz | Status APROVADO | 05-curadoria.png |
-| 6 | Publicar receita | Chef aprovado cria receita e publica | Aparece na vitrine; rascunho não aparece | 06-publicar.png |
-| 7 | Filtros | Escolher Vegano e Até 30 min | Lista filtrada | 07-filtros.png |
-| 8 | Pagamento recusado | Comprar com cartão final 0000 | Erro 402 | 08-402.png |
-| 9 | Pagamento aprovado | Comprar com PIX ou outro cartão | Receita liberada e modo cozinha | 09-aprovado.png |
-| 10 | Kit fora do raio | Testar CEPs até aparecer "fora do raio" | Opção de retirada ou só a aula | 10-raio.png |
-| 11 | Pedido de kit | Confirmar com o termo marcado | Pedido aparece no dashboard do chef | 11-pedido.png |
-| 12 | Comunidade | Postar dúvida; chef responde no painel | Resposta aparece no post | 12-comunidade.png |
-| 13 | Responsividade | Repetir telas 6, 9 e 11 com a janela a 390 px | Sem rolagem lateral na página | 13-mobile.png |
-
-## Roteiro manual no Supabase
-
-Resultado do que já foi executado no projeto real do Supabase (prints em `docs/evidencias/`, resumo em `docs/EVIDENCIAS_SUPABASE.md`):
-
-| Fluxo | Situação |
+| Caso | Resultado da revisão |
 |---|---|
-| Criar o banco rodando `server/supabase.sql` | Verificado |
-| Cadastro de 4 contas (administrador, chef, cozinheira e chef pendente) com perfil criado pelo gatilho | Verificado |
-| Script de contas de demonstração (administrador e restaurante Osteria Torino) | Verificado |
-| Compra de receita gravada em `transacao_financeira` e `acesso_receita` | Verificado |
-| Painel do administrador lendo usuários, transações e criadores | Verificado |
-| Publicar receita como chef aprovado | A testar |
-| Pedido de kit dentro e fora do raio | A testar |
-| Cartão recusado (final 0000) sem liberar acesso | A testar |
-| Comunidade: post e resposta do chef | A testar |
-| Troca de nome e de senha no perfil | A testar |
-| Excluir conta e todos os dados no perfil | A testar |
-| Entrar com a mesma conta em outro aparelho | A testar |
+| CT005–CT009, cadastro, duplicidade, login, credenciais inválidas e campos obrigatórios | Testes de validação, autenticação e duplicidade em Node e SQLite. Criação de conta e início de sessão conferidos na interface. |
+| Curadoria e publicação | Perfil pendente bloqueado, aprovação exigida, publicação e rascunho testados na API. |
+| Checkout e cupom | Backend determina valor e nome do item. Referência inexistente, criador divergente e cupom inválido são recusados. Cartão recusado grava transação sem liberar acesso. [Recusa](sprint-3/evidencias/02-pagamento-recusado.png) |
+| Catálogo e modo cozinha | Busca por ingrediente, navegação direta e recarga. Pagamento simulado libera ingredientes e passos. [Catálogo](sprint-3/evidencias/01-catalogo.png), [Modo cozinha](sprint-3/evidencias/03-modo-cozinha.png) |
+| Kits | CEP fora do raio, falta de termo, receita sem kit e modalidade inválida bloqueiam a compra. A retirada válida cria pedido. [Checkout a 390 px](sprint-3/evidencias/04-retirada-mobile.png) |
+| Comunidade e painel | Publicação, resposta, pedido no painel do criador e mudança de status testados pela API. |
+| Perfil e exclusão | Nome, senha e exclusão conferidos pelas suítes. Chromium confirma exclusão e falha de novo login. SQL verifica senha atual e exclusão dos dados em cascata. |
 
-## Registro de ajustes feitos após os testes
+## Reproduzir
 
-- Chamada de `video.play()` protegida para navegadores que bloqueiam vídeo automático.
+Na raiz do repositório:
+
+```bash
+npm test
+DB_FILE=/tmp/gm-sprint3-qa.sqlite PORT=3811 npm start
+```
+
+Em outro terminal:
+
+```bash
+API_URL=http://127.0.0.1:3811/api node tests/api.test.js
+```
+
+Para executar os testes opcionais com dependências instaladas fora do código da aplicação:
+
+```bash
+qa_dir=$(mktemp -d)
+npm install --prefix "$qa_dir" playwright@1.62.1 @electric-sql/pglite@0.6.1
+NODE_PATH="$qa_dir/node_modules" node tests/sprint3-postgres.test.cjs
+NODE_PATH="$qa_dir/node_modules" CHROMIUM_BIN=/usr/bin/chromium \
+  GM_TEST_EVIDENCE=/tmp/gm-sprint3-evidencias node tests/sprint3-browser.test.cjs
+```
+
+Use um Chromium instalado, indicando seu caminho em `CHROMIUM_BIN`. O teste de interface cria dados em um banco descartável. Para um teste sem acesso à CDN, baixe o arquivo jsPDF 2.5.1 usado pelo front e defina `GM_TEST_JSPDF` com o caminho da cópia local. O teste SQL cria um banco em memória com o formato mínimo de `auth.users` e `auth.uid()`, além das funções e tabelas reais do projeto.
+
+## Homologação da versão publicada
+
+O [registro histórico](EVIDENCIAS_SUPABASE.md) tem capturas de conta, compra e administração da versão anterior. A revisão atual ainda requer aplicação do SQL e do front em um projeto de homologação com Auth real. Use contas descartáveis e registre data, usuário de teste e resultado destes fluxos:
+
+1. Cadastro, autenticação e abertura da mesma conta em segundo navegador.
+2. Aprovação de criador, publicação e despublicação de receita.
+3. Compra da receita-base e de receita publicada, com cupom, recusa de cartão e acesso liberado via PIX.
+4. Kit com CEP interno, externo e retirada, com conferência do pedido no painel.
+5. Post, resposta, atualização de perfil, senha e exclusão de conta com tentativa de login posterior.
+6. Download da ficha e leitura da marca d’água, navegação por teclado e compatibilidade em celular real.
