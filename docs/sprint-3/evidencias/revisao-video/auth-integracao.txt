@@ -1,0 +1,5 @@
+PASS  Migração aplicada duas vezes no PostgreSQL com o esquema real do GoTrue.
+PASS  GoTrue cadastra e autentica. Curadoria aprova e o criador publica a videoaula.
+PASS  Recusa, PIX com cupom, acesso ao vídeo e login independente com acesso persistido.
+PASS  Kit fora do raio, retirada, status do pedido, post e resposta do criador.
+PASS  Edição de perfil, troca de senha no GoTrue e exclusão de conta com limpeza.

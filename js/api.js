@@ -147,14 +147,33 @@ const API = (() => {
     save(); setToken(null); return {};
   });
 
-  route('GET', '/recipes', async () => ({ recipes: db.recipes.filter(r => r.status === 'publicada' && db.creators.some(c => c.chefId === r.chefId && c.status === 'APROVADO')), creators: db.creators.filter(c => c.status === 'APROVADO').map(c => ({ chefId:c.chefId, raio:c.raio, name:(db.users.find(u => u.id === c.userId) || { name:c.nome }).name })) }));
-  const recipeBody = b => {
+  const approvedCreators = () => db.creators.filter(c => c.status === 'APROVADO');
+  route('GET', '/recipes', async () => {
+    const creators = approvedCreators();
+    const recipes = db.recipes
+      .filter(r => r.status === 'publicada' && creators.some(c => c.chefId === r.chefId))
+      .map(({ video, ...recipe }) => ({ ...recipe, hasVideo:!!video }));
+    return { recipes, creators:creators.map(c => ({ chefId:c.chefId, raio:c.raio,
+      name:(db.users.find(u => u.id === c.userId) || { name:c.nome }).name })) };
+  });
+  route('GET', '/recipes/:id/video', async (b, p) => {
+    const u = needUser();
+    const recipe = db.recipes.find(r => r.id === p[0]);
+    const creator = recipe && approvedCreators().find(c => c.chefId === recipe.chefId);
+    const managesRecipe = creator && (u.kind === 'admin' || creator.userId === u.id);
+    if(!creator || (recipe.status !== 'publicada' && !managesRecipe)) fail(404, 'Receita indisponível.');
+    const purchased = db.access.some(a => a.userId === u.id && a.recipeId === recipe.id);
+    const subscribed = db.subs.some(a => a.userId === u.id && a.chefId === recipe.chefId);
+    if(!managesRecipe && !purchased && !subscribed) fail(403, 'Desbloqueie a receita para assistir à videoaula.');
+    return { video:recipe.video || '' };
+  });
+  const recipeBody = (b, previousVideo = '') => {
     if(!(b.name || '').trim()) fail(422, 'Informe o título da receita.');
     if(!(Number(b.price) > 0)) fail(422, 'Informe um preço de acesso maior que zero.');
     if(!(Number(b.minutes) > 0)) fail(422, 'Informe o tempo de preparo em minutos.');
     const lines = s => String(s || '').split('\n').map(x => x.trim()).filter(Boolean);
     return { name:b.name.trim(), categoria:['alta','massas','carnes','brasileiras','vegetarianas','sobremesas'].includes(b.categoria) ? b.categoria : 'alta', desc:(b.desc || '').trim(), restricao:b.restricao || 'sem restrição', minutes:Number(b.minutes), time:b.minutes + ' min',
-      img:b.img || '', price:Number(b.price), kitPrice:Number(b.kitPrice) || 0, video:(b.video || '').trim(),
+      img:b.img || '', price:Number(b.price), kitPrice:Number(b.kitPrice) || 0, video:LinksVideo.validate(b.video, previousVideo, fail),
       ingredientes: lines(b.ingredientes), instrucoes: lines(b.instrucoes) };
   };
   route('POST', '/recipes', async b => {
@@ -164,7 +183,7 @@ const API = (() => {
   });
   route('PATCH', '/recipes/:id', async (b, p) => {
     const c = needApproved(), r = db.recipes.find(x => x.id === p[0] && x.chefId === c.chefId) || fail(404, 'Receita não encontrada.');
-    if(b.status && !b.name) r.status = b.status; else Object.assign(r, recipeBody(b), b.status ? { status:b.status } : {});
+    if(b.status && !b.name) r.status = b.status; else Object.assign(r, recipeBody(b, r.video || ''), b.status ? { status:b.status } : {});
     save(); return { recipe: r };
   });
   route('DELETE', '/recipes/:id', async (b, p) => {

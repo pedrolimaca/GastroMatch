@@ -3,7 +3,7 @@ const fs = require('fs'), assert = require('assert');
 const store = {}; const localStorage = { getItem:k => (k in store ? store[k] : null), setItem:(k, v) => { store[k] = String(v); }, removeItem:k => { delete store[k]; } };
 /* Modo local (padrão): node tests/api.test.js | Modo servidor/banco: API_URL=http://localhost:3000/api node tests/api.test.js */
 const GEO = require('../js/geo.js'), URL_API = process.env.API_URL || null;
-const API = new Function('localStorage', 'crypto', 'GEO', 'Checkout', 'window', fs.readFileSync(__dirname + '/../js/api.js', 'utf8') + ';return API;')(localStorage, require('crypto').webcrypto, GEO, require('../js/checkout.js'), { GM_API_BASE: URL_API });
+const API = new Function('localStorage', 'crypto', 'GEO', 'Checkout', 'LinksVideo', 'window', fs.readFileSync(__dirname + '/../js/api.js', 'utf8') + ';return API;')(localStorage, require('crypto').webcrypto, GEO, require('../js/checkout.js'), require('../js/video.js'), { GM_API_BASE: URL_API });
 console.log('Modo de teste: ' + (URL_API ? 'servidor com banco de dados (' + URL_API + ')' : 'local (localStorage)'));
 let ok = 0, bad = 0, CH = '';
 async function t(nome, fn){ try{ await fn(); ok++; console.log('PASS  ' + nome); }catch(e){ bad++; console.log('FAIL  ' + nome + ' -> ' + e.message); } }
@@ -50,6 +50,32 @@ const RUN = Date.now(); const em = n => n + RUN + '@x.com';
     await API.patch('/recipes/' + rid, { status:'publicada' });
   });
   await t('RF02 validação: preço e tempo obrigatórios', async () => { await err(API.post('/recipes', { name:'X', price:0, minutes:10 }), 422); await err(API.post('/recipes', { name:'X', price:10, minutes:0 }), 422); });
+  await t('Videoaula: valida link, oculta endereço no catálogo e verifica acesso no servidor', async () => {
+    const video = 'https://youtu.be/abcdefghijk';
+    const body = { name:'Videoaula de teste', price:20, minutes:10, video };
+    await err(API.post('/recipes', { ...body, video:'http://example.com/aula.mp4' }), 422, 'HTTPS');
+    const { recipe } = await API.post('/recipes', { ...body, draft:true });
+    const path = '/recipes/' + recipe.id + '/video';
+    assert.strictEqual((await API.get(path)).video, video);
+    const { recipe:edited } = await API.patch('/recipes/' + recipe.id, { name:'Aula editada', price:20, minutes:10 });
+    assert.strictEqual(edited.video, video);
+    await API.post('/auth/logout');
+    await err(API.get(path), 401);
+    await login(em('joana'), '123456');
+    await err(API.get(path), 404);
+    await login(em('novo'), '123456');
+    await API.patch('/recipes/' + recipe.id, { status:'publicada' });
+    await login(em('joana'), '123456');
+    const listing = (await API.get('/recipes')).recipes.find(r => r.id === recipe.id);
+    assert.strictEqual(listing.hasVideo, true);
+    assert(!('video' in listing));
+    await err(API.get(path), 403);
+    await API.post('/checkout', { type:'receita', refId:recipe.id, metodo:'pix' });
+    assert.strictEqual((await API.get(path)).video, video);
+    await login(em('novo'), '123456');
+    await API.patch('/recipes/' + recipe.id, { name:'Sem vídeo', price:20, minutes:10, video:'' });
+    assert.strictEqual((await API.get(path)).video, '');
+  });
   await t('RF03 criador não compra receita (403)', async () => { await err(API.post('/checkout', { type:'receita', refId:rid, chefId:CH, amount:25.9, metodo:'pix' }), 403); });
   await t('RN05 cartão recusado: HTTP 402, transação RECUSADA e acesso NÃO liberado', async () => {
     await login(em('joana'), '123456');

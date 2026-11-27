@@ -32,10 +32,13 @@ Erros: resposta `{ "message": "texto para o usuário" }` com o status HTTP corre
 
 | Método e rota | Acesso | Corpo | Resposta e erros |
 |---|---|---|---|
-| `GET /recipes` | Público | | `{ recipes[], creators[] }` somente receitas publicadas de criadores aprovados |
+| `GET /recipes` | Público | | `{ recipes[], creators[] }` somente receitas publicadas de criadores aprovados. Fornece `hasVideo` |
+| `GET /recipes/:id/video` | Administrador, criador da receita, comprador ou assinante | | `{ video }`. 401 (sem sessão), 403 (sem acesso), 404 (receita indisponível). |
 | `POST /recipes` | Criador aprovado | `name`, `price` > 0, `minutes` > 0, `restricao`, `categoria`, `desc`, `ingredientes` e `instrucoes` (um por linha), `video`, `img`, `kitPrice`, `draft` | `{ recipe }`. 403 se pendente ou rejeitado, 422 |
 | `PATCH /recipes/:id` | Dono da receita | mesmos campos, ou só `status` (`publicada` ou `rascunho`) | `{ recipe }`. 404 se for de outro criador |
 | `DELETE /recipes/:id` | Dono da receita | | `{}`. 404 |
+
+O campo `video` aceita um endereço HTTPS ou texto vazio para remover o link. O dono pode continuar editando receitas com links antigos e substituí-los quando necessário.
 
 Categorias aceitas: `alta`, `massas`, `carnes`, `brasileiras`, `vegetarianas`, `sobremesas`.
 
@@ -110,6 +113,7 @@ O adaptador `js/supabase.js` conserva o contrato acima para a interface. A auten
 |---|---|
 | Disponibilidade, catálogo e perfil | `gm_ping`, `gm_recipes`, `gm_me` |
 | Nome e exclusão | `gm_update_name(p_name)`, `gm_delete_account(p_confirm, p_password)` |
+| Videoaula | `gm_recipe_video(p_id)` |
 | Receitas | `gm_recipe_create(p_data)`, `gm_recipe_update(p_id, p_data)`, `gm_recipe_delete(p_id)` |
 | Checkout | `gm_checkout(p_data)` |
 | Comunidade | `gm_posts`, `gm_post_create(p_data)`, `gm_post_reply(p_id, p_text)` |

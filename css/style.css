@@ -320,7 +320,9 @@ html[data-theme="dark"] .rating{ color:var(--olive); }
 .meta-strip b{ font-size:14px; font-weight:600; }
 .tabs{ display:flex; gap:22px; border-bottom:1px solid var(--line); margin-bottom:18px; font-family:'Public Sans',sans-serif; font-size:11.5px; color:var(--ink-soft); }
 .tabs .active{ color:var(--ink); border-bottom:2px solid var(--brick); padding-bottom:9px; }
-.tabs span{ padding-bottom:9px; }
+.tabs button{ padding:0 0 9px; color:inherit; font:inherit; border-bottom:2px solid transparent; }
+.lesson-video{ display:grid; gap:8px; margin:12px 0 16px; font-size:13px; color:var(--ink-soft); }
+.lesson-video video, .lesson-video iframe{ display:block; width:100%; aspect-ratio:16/9; border:0; background:#171712; }
 .locked-box{ background:repeating-linear-gradient(-45deg, rgba(36,33,27,.035), rgba(36,33,27,.035) 8px, transparent 8px, transparent 16px); border:1px dashed var(--line); padding:22px; text-align:center; font-size:13px; color:var(--ink-soft); margin-bottom:16px; }
 .locked-box b{ display:block; color:var(--ink); font-size:14.5px; margin-bottom:5px; font-family:'Fraunces',serif; font-weight:500; }
 .purchase-panel{ background:var(--paper-card); border:1px solid var(--line); padding:4px 20px 0; }
@@ -543,7 +545,6 @@ html[data-theme="dark"] .status-pill.s-pendente,html[data-theme="dark"] .status-
 #authArea .nav-btn-ghost{ white-space:nowrap; }
 video.hero-photo{ width:100%; object-fit:cover; display:block; }
 
-.tabs span{ cursor:pointer; }
 .tab-panel[hidden]{ display:none; }
 .review-head{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:14px; font-size:13px; color:var(--ink-soft); }
 .review-head b{ font-family:'Fraunces',serif; font-size:20px; color:var(--ink); font-weight:500; }

@@ -9,6 +9,7 @@ const http = require('http'), fs = require('fs'), path = require('path'), crypto
 const { DatabaseSync } = require('node:sqlite');
 const GEO = require('../js/geo.js');
 const Checkout = require('../js/checkout.js');
+const LinksVideo = require('../js/video.js');
 
 const ROOT = path.join(__dirname, '..');
 const PORT = process.env.PORT || 3000;
@@ -75,13 +76,13 @@ function needApproved(ctx){
   return c;
 }
 const needAdmin = ctx => { const u = needUser(ctx); if(u.perfil !== 'admin') fail(403, 'Acesso restrito ao administrador.'); return u; };
-function recipeBody(b){
+function recipeBody(b, previousVideo = ''){
   if(!String(b.name || '').trim()) fail(422, 'Informe o título da receita.');
   if(!(Number(b.price) > 0)) fail(422, 'Informe um preço de acesso maior que zero.');
   if(!(Number(b.minutes) > 0)) fail(422, 'Informe o tempo de preparo em minutos.');
   const lines = s => String(s || '').split('\n').map(x => x.trim()).filter(Boolean);
   return { titulo:b.name.trim(), descricao:String(b.desc || '').trim(), categoria_restricao:b.restricao || 'sem restrição', categoria: CATEGORIAS.includes(b.categoria) ? b.categoria : 'alta',
-    tempo_preparo_min:Math.round(Number(b.minutes)), preco:Number(b.price), link_videoaula:String(b.video || '').trim(), imagem:b.img || '',
+    tempo_preparo_min:Math.round(Number(b.minutes)), preco:Number(b.price), link_videoaula:LinksVideo.validate(b.video, previousVideo, fail), imagem:b.img || '',
     ingredientes:JSON.stringify(lines(b.ingredientes)), instrucoes:JSON.stringify(lines(b.instrucoes)), kit:Number(b.kitPrice) || 0 };
 }
 function saveKit(idReceita, valor, ing){
@@ -172,8 +173,21 @@ route('POST', '/me/delete', (b, p, ctx) => {
 });
 
 route('GET', '/recipes', () => ({
-  recipes: all(RECIPE_SQL + " WHERE r.status = 'PUBLICADA' AND c.status_validacao = 'APROVADO' ORDER BY r.id").map(mRecipe),
+  recipes: all(RECIPE_SQL + " WHERE r.status = 'PUBLICADA' AND c.status_validacao = 'APROVADO' ORDER BY r.id").map(mRecipe).map(({ video, ...recipe }) => ({ ...recipe, hasVideo:!!video })),
   creators: all("SELECT c.chef_id, c.raio_entrega_km, COALESCE(u.nome, c.nome_publico) nome FROM criador_conteudo c LEFT JOIN usuario u ON u.id = c.id_usuario WHERE c.status_validacao = 'APROVADO'").map(c => ({ chefId:c.chef_id, raio:c.raio_entrega_km, name:c.nome })) }));
+route('GET', '/recipes/:id/video', (b, p, ctx) => {
+  const u = needUser(ctx), id = p[0];
+  if(!/^r[1-9]\d*$/.test(id)) fail(404, 'Receita indisponível.');
+  const recipe = one(`SELECT r.status, r.link_videoaula, c.chef_id, c.id_usuario
+    FROM receita r JOIN criador_conteudo c ON c.id = r.id_criador
+    WHERE r.id = ? AND c.status_validacao = 'APROVADO'`, id.slice(1));
+  const managesRecipe = recipe && (u.perfil === 'admin' || recipe.id_usuario === u.id);
+  if(!recipe || (recipe.status !== 'PUBLICADA' && !managesRecipe)) fail(404, 'Receita indisponível.');
+  const purchased = one('SELECT 1 FROM acesso_receita WHERE id_usuario = ? AND id_receita = ?', u.id, id);
+  const subscribed = one('SELECT 1 FROM assinatura WHERE id_usuario = ? AND chef_id = ?', u.id, recipe.chef_id);
+  if(!managesRecipe && !purchased && !subscribed) fail(403, 'Desbloqueie a receita para assistir à videoaula.');
+  return { video:recipe.link_videoaula };
+});
 route('POST', '/recipes', (b, p, ctx) => {
   const c = needApproved(ctx), d = recipeBody(b);
   return tx(() => {
@@ -187,7 +201,7 @@ route('PATCH', '/recipes/:id', (b, p, ctx) => {
   const c = needApproved(ctx), r = ownRecipe(c, p[0]);
   if(b.status && !b.name) run('UPDATE receita SET status = ? WHERE id = ?', b.status === 'publicada' ? 'PUBLICADA' : 'RASCUNHO', r.id);
   else {
-    const d = recipeBody(b);
+    const d = recipeBody(b, r.link_videoaula);
     run('UPDATE receita SET titulo=?, descricao=?, instrucoes=?, ingredientes=?, categoria_restricao=?, categoria=?, tempo_preparo_min=?, preco=?, link_videoaula=?, imagem=?, status=? WHERE id=?',
       d.titulo, d.descricao, d.instrucoes, d.ingredientes, d.categoria_restricao, d.categoria, d.tempo_preparo_min, d.preco, d.link_videoaula, d.imagem || r.imagem, b.status ? (b.status === 'publicada' ? 'PUBLICADA' : 'RASCUNHO') : r.status, r.id);
     saveKit(r.id, d.kit, d.ingredientes);
@@ -273,7 +287,7 @@ route('POST', '/admin/creators/:id/:acao', (b, p, ctx) => {
 });
 
 /* ---------- servidor HTTP ---------- */
-const MIME = { '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.json':'application/json', '.png':'image/png', '.webp':'image/webp', '.txt':'text/plain; charset=utf-8', '.jpg':'image/jpeg', '.svg':'image/svg+xml', '.mp4':'video/mp4', '.md':'text/plain; charset=utf-8' };
+const MIME = { '.html':'text/html; charset=utf-8', '.css':'text/css; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.json':'application/json', '.png':'image/png', '.webp':'image/webp', '.txt':'text/plain; charset=utf-8', '.jpg':'image/jpeg', '.svg':'image/svg+xml', '.mp4':'video/mp4', '.webm':'video/webm', '.md':'text/plain; charset=utf-8' };
 const send = (res, status, body, headers = {}) => { res.writeHead(status, { 'Access-Control-Allow-Origin':'*', 'Access-Control-Allow-Headers':'Content-Type, Authorization', 'Access-Control-Allow-Methods':'GET,POST,PATCH,DELETE,OPTIONS', ...headers }); res.end(body); };
 const readBody = req => new Promise((ok, no) => { let s = 0; const c = []; req.on('data', d => { s += d.length; if(s > 8e6){ no(Object.assign(new Error('Requisição muito grande.'), { status:413 })); req.destroy(); } else c.push(d); }); req.on('end', () => ok(Buffer.concat(c).toString())); req.on('error', no); });
 
@@ -289,7 +303,7 @@ const server = http.createServer(async (req, res) => {
       if(!body || typeof body !== 'object' || Array.isArray(body)) fail(400, 'Envie um objeto JSON.');
       const auth = (req.headers.authorization || '').replace(/^Bearer /, ''), uid = verify(auth);
       const ctx = { user: uid ? one('SELECT * FROM usuario WHERE id = ?', uid) : null };
-      return send(res, 200, JSON.stringify(hit.fn(body, hit.re.exec(sub).slice(1), ctx)), { 'Content-Type':'application/json; charset=utf-8' });
+      return send(res, 200, JSON.stringify(hit.fn(body, hit.re.exec(sub).slice(1), ctx)), { 'Content-Type':'application/json; charset=utf-8', 'Cache-Control':'no-store' });
     }catch(e){
       if(!e.status) console.error(e);
       return send(res, e.status || 500, JSON.stringify({ message: e.status ? e.message : 'Erro interno do servidor.' }), { 'Content-Type':'application/json; charset=utf-8' });

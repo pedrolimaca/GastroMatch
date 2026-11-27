@@ -23,10 +23,10 @@ function ensureChef(id, name, raio){
     stats:{ receitas:0, alunos:0, avaliacao:0 }, bio:'Perfil aprovado pela curadoria do GastroMatch.', cover: IMG.kitchen };
   else chefs[id].radius = raio + ' km';
 }
-function toFrontRecipe(r){
+function toFrontRecipe(r, fromCatalog = false){
   const kit = r.ingredientes && r.ingredientes.length ? r.ingredientes.map(i => [esc(i), '']) : [['Ingredientes a definir', '']];
   return { id:r.id, custom:true, name:esc(r.name), chef:r.chefId, time:esc(r.time), minutes:r.minutes, difficulty:'média', portions:'2 pessoas', price:r.price,
-    cat:r.categoria || 'alta', rating:0, reviews:0, kitPrice:r.kitPrice || 0, kitsLeft:5, img:r.img || IMG.risoto, video:r.video || '', restricao:r.restricao, kit,
+    cat:r.categoria || 'alta', rating:0, reviews:0, kitPrice:r.kitPrice || 0, kitsLeft:5, img:r.img || IMG.risoto, hasVideo:r.hasVideo ?? !!r.video, legacyVideo:fromCatalog && r.hasVideo === undefined ? r.video : '', restricao:r.restricao, kit,
     instrucoes: r.instrucoes && r.instrucoes.length ? r.instrucoes.map(esc) : [esc(r.desc) || 'Modo de preparo em edição.'],
     testi:{ quote:'Em breve as primeiras avaliações.', name:'GastroMatch' }, status:r.status };
 }
@@ -34,7 +34,7 @@ async function loadCatalog(){
   const d = await API.get('/recipes');
   for(let i = recipes.length - 1; i >= 0; i--) if(recipes[i].custom) recipes.splice(i, 1);
   d.creators.forEach(c => ensureChef(c.chefId, c.name, c.raio));
-  d.recipes.forEach(r => recipes.push(toFrontRecipe(r)));
+  d.recipes.forEach(r => recipes.push(toFrontRecipe(r, true)));
   const posts = (await API.get('/posts')).posts;
   communityPosts.length = 0; communityPosts.push(...posts);
 }
@@ -65,10 +65,15 @@ function renderAuthArea(){
 async function logout(){ try{ await API.post('/auth/logout'); }catch(e){} currentUser = null; unlockedRecipes.clear(); subscribedChefs.clear(); D = null; window.draftRecipes = []; adminData = null; renderAuthArea(); showToast('Você saiu da sua conta.'); goToTab('home'); }
 
 /* ---------- login e cadastro (RF01 / RF05) ---------- */
+function localModeMessage(){
+  return API.mode() === 'local'
+    ? '<p class="alert-box" role="status">Modo demonstração. Os dados ficam neste navegador. Use uma conta de teste.</p>' : '';
+}
 function renderLogin(){
   return `<div class="auth-wrap"><div class="auth-card">
     <h1 class="auth-title">Bem-vindo de volta</h1>
     <p class="auth-sub">Entre com seu e-mail e senha para acessar sua conta GastroMatch.</p>
+    ${localModeMessage()}
     <div class="field"><label for="loginEmail">E-mail</label><input id="loginEmail" type="email" autocomplete="email" placeholder="voce@email.com"></div>
     <div class="field"><label for="loginPass">Senha</label><input id="loginPass" type="password" autocomplete="current-password" placeholder="Sua senha" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <div id="loginError"></div>
@@ -228,15 +233,19 @@ function renderDashboard(){
 }
 async function loadDashboard(){
   const root = document.getElementById('dash-root'); if(!root) return;
-  try{ D = await API.get('/dashboard'); }catch(e){ root.innerHTML = fmtErr(e); return; }
+  const user = currentUser;
+  let data;
+  try{ data = await API.get('/dashboard'); }catch(e){ root.innerHTML = fmtErr(e); return; }
+  if(!root.isConnected || currentUser !== user) return;
+  D = data;
   currentUser.creator = D.creator; ensureChef(D.creator.chefId, currentUser.name, D.creator.raio);
-  window.draftRecipes = D.recipes.map(toFrontRecipe); paintDashboard();
+  window.draftRecipes = D.recipes.map(recipe => toFrontRecipe(recipe)); paintDashboard();
 }
 const pill = s => `<span class="status-pill s-${String(s).toLowerCase()}">${esc(s)}</span>`;
 function paintDashboard(){
   const root = document.getElementById('dash-root'); if(!root || !D) return;
   const c = D.creator, name = (chefs[c.chefId] || {}).name || currentUser.name;
-  let h = `<h2 class="dash-title">${esc(name)}, painel do criador</h2><p class="dash-sub">${esc(currentUser.email)} ${pill(c.status === 'PENDENTE' ? 'PENDENTE DE VALIDAÇÃO' : c.status)} <small>${API.mode() === 'servidor' ? 'dados no banco de dados' : 'dados salvos no navegador'}</small></p>`;
+  let h = `<h2 class="dash-title">${esc(name)}, painel do criador</h2><p class="dash-sub">${esc(currentUser.email)} ${pill(c.status === 'PENDENTE' ? 'PENDENTE DE VALIDAÇÃO' : c.status)} <small>${API.mode() === 'local' ? 'dados salvos no navegador' : 'dados no banco de dados'}</small></p>`;
   if(c.status !== 'APROVADO'){
     h += `<div class="alert-box">${c.status === 'PENDENTE' ? 'Seu cadastro está em análise pela curadoria. Publicar receitas e cadastrar kits será liberado após a aprovação.' : 'Seu cadastro foi rejeitado pela curadoria. Crie uma nova conta com a documentação correta.'}</div>
       <div class="rev-cards"><div class="rev-card"><small>documento enviado</small><b style="font-size:15px">${esc(c.doc)}</b></div><div class="rev-card"><small>termo sanitário</small><b style="font-size:15px">${c.termo ? 'Aceito' : 'Pendente'}</b></div><div class="rev-card"><small>raio de entrega</small><b>${c.raio} km</b></div></div>`;
@@ -250,7 +259,7 @@ function dashTabHtml(){
   const c = D.creator, base = recipes.filter(r => r.chef === c.chefId && !r.custom), tx = D.tx, rev = tx.reduce((a, t) => a + t.valor, 0);
   const sales = id => tx.filter(t => t.type === 'receita' && t.refId === id).length;
   if(dashTab === 'visao'){
-    const pend = D.orders.filter(o => o.status === 'AGUARDANDO').length, all = base.concat(D.recipes.filter(r => r.status === 'publicada').map(toFrontRecipe)), mx = Math.max(1, ...all.map(r => sales(r.id)));
+    const pend = D.orders.filter(o => o.status === 'AGUARDANDO').length, all = base.concat(D.recipes.filter(r => r.status === 'publicada').map(recipe => toFrontRecipe(recipe))), mx = Math.max(1, ...all.map(r => sales(r.id)));
     return `<div class="rev-cards"><div class="rev-card"><small>receita total</small><b>${money(rev)}</b><em>${tx.length} transações aprovadas</em></div><div class="rev-card"><small>receitas vendidas</small><b>${tx.filter(t => t.type === 'receita').length}</b></div><div class="rev-card"><small>kits pedidos</small><b>${D.orders.length}</b></div><div class="rev-card"><small>assinantes</small><b>${D.subs}</b></div></div>
       ${pend ? `<div class="alert-box">${pend} pedido(s) de kit aguardando confirmação de estoque.</div>` : ''}
       <h3 class="dash-h3">Vendas por receita</h3>${all.map(r => `<div class="bar-row"><span>${r.name}</span><div class="bar"><i style="width:${sales(r.id) / mx * 100}%"></i></div><b>${sales(r.id)}</b></div>`).join('') || '<p class="empty-note">Nenhuma receita publicada.</p>'}
@@ -270,7 +279,7 @@ function dashTabHtml(){
   return `<div class="dash-post"><div class="field"><label for="raioInput">Raio de entrega dos kits (km, máximo 15)</label><input id="raioInput" type="number" min="1" max="15" value="${c.raio}" style="max-width:160px"></div><div id="raioMsg"></div><button class="auth-submit" style="width:auto;padding:11px 22px" onclick="saveRaio()">Salvar raio</button></div>`;
 }
 const txTable = list => list.length ? `<div class="table-scroll"><table class="data-table"><tr><th>Data</th><th>Tipo</th><th>Valor</th><th>Método</th></tr>${list.map(t => `<tr><td>${t.date}</td><td>${t.type}</td><td>${money(t.valor)}</td><td>${t.metodo}</td></tr>`).join('')}</table></div>` : '<p class="empty-note">Sem transações ainda.</p>';
-async function dashAct(fn, msg){ try{ await fn(); await loadCatalog(); D = await API.get('/dashboard'); window.draftRecipes = D.recipes.map(toFrontRecipe); if(msg) showToast(msg); if(currentPage === 'dashboard') paintDashboard(); }catch(e){ showToast(e.message); } }
+async function dashAct(fn, msg){ try{ await fn(); await loadCatalog(); D = await API.get('/dashboard'); window.draftRecipes = D.recipes.map(recipe => toFrontRecipe(recipe)); if(msg) showToast(msg); if(currentPage === 'dashboard') paintDashboard(); }catch(e){ showToast(e.message); } }
 const togglePublish = (id, status) => dashAct(() => API.patch('/recipes/' + id, { status }), status === 'publicada' ? 'Receita publicada no marketplace.' : 'Receita voltou para rascunho.');
 const deleteRecipe = id => { if(confirm('Excluir esta receita? Essa ação não pode ser desfeita.')) dashAct(() => API.del('/recipes/' + id), 'Receita excluída.'); };
 const setOrderStatus = (id, status) => dashAct(() => API.patch('/orders/' + id, { status }), 'Pedido atualizado para ' + status.toLowerCase() + '.');
@@ -309,8 +318,13 @@ function renderNewRecipe(id){
     <div class="field"><label for="nrKit">Valor do kit de ingredientes (R$, deixe vazio se não houver kit)</label><input id="nrKit" type="number" step="0.10" min="0" value="${r.kitPrice || ''}"></div>
     <div class="field"><label for="nrIng">Ingredientes (um por linha, ex: Arroz arbóreo, 200g)</label><textarea id="nrIng" rows="4">${esc((r.ingredientes || []).join('\n'))}</textarea></div>
     <div class="field"><label for="nrPassos">Modo de preparo (um passo por linha)</label><textarea id="nrPassos" rows="4">${esc((r.instrucoes || []).join('\n'))}</textarea></div>
-    <div class="field"><label for="nrVideo">Link da videoaula</label><input id="nrVideo" value="${esc(r.video)}" placeholder="https://..."></div>
-    <div class="field"><label for="nrFoto">Foto do prato</label><input type="file" id="nrFoto" accept="image/*" onchange="handleRecipeImg(event)"><img id="nrPreview" class="preview-img" style="${nrImg ? '' : 'display:none'}" src="${nrImg}"></div>
+    <div class="field"><label for="nrVideo">Link da videoaula (opcional)</label>
+      <input id="nrVideo" value="${esc(r.video)}" placeholder="https://..." inputmode="url" maxlength="4096" aria-describedby="nrVideoHint" oninput="document.getElementById('nrVideoPreview').replaceChildren()">
+      <small class="hint" id="nrVideoHint">Cole o link de um vídeo do YouTube ou Vimeo, ou use um link HTTPS direto para MP4 ou WebM.</small>
+      <button class="tiny-btn" type="button" onclick="previewRecipeVideo()">Testar videoaula</button>
+      <div id="nrVideoPreview" aria-live="polite"></div>
+    </div>
+    <div class="field"><label for="nrFoto">Foto do prato</label><input type="file" id="nrFoto" accept="image/*" onchange="handleRecipeImg(event)"><img id="nrPreview" class="preview-img" style="${nrImg ? '' : 'display:none'}" src="${esc(nrImg)}" alt="Prévia da foto do prato"></div>
     <div id="nrError"></div>
     <div class="modal-actions" style="justify-content:flex-start"><button class="auth-submit" style="width:auto" onclick="publishRecipe(false)">Publicar</button><button class="cancel" style="padding:10px 16px" onclick="publishRecipe(true)">Salvar rascunho</button></div>
   </div></div>`;
@@ -321,14 +335,41 @@ function handleRecipeImg(ev){
   fr.onload = () => { const im = new Image(); im.onload = () => { const k = Math.min(1, 800 / im.width), cv = document.createElement('canvas'); cv.width = im.width * k; cv.height = im.height * k; cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height); nrImg = cv.toDataURL('image/jpeg', .75); const p = document.getElementById('nrPreview'); p.src = nrImg; p.style.display = 'block'; }; im.src = fr.result; };
   fr.readAsDataURL(f);
 }
+function previewRecipeVideo(){
+  const field = document.getElementById('nrVideo');
+  const preview = document.getElementById('nrVideoPreview');
+  const source = LinksVideo.parse(field.value, field.value === field.defaultValue);
+  if(!source){
+    preview.innerHTML = fmtErr({ message:field.value.trim() ? LinksVideo.message : 'Cole o link da videoaula para testar.' });
+    return;
+  }
+  preview.innerHTML = videoPlayerHtml(source);
+}
 async function publishRecipe(asDraft){
   const g = id => document.getElementById(id).value;
   const body = { name:g('nrTitle'), desc:g('nrDesc'), restricao:g('nrRestricao'), categoria:g('nrCategoria'), minutes:g('nrTempo'), price:g('nrPreco'), kitPrice:g('nrKit'), ingredientes:g('nrIng'), instrucoes:g('nrPassos'), video:g('nrVideo'), img:nrImg, draft:asDraft };
+  const field = document.getElementById('nrVideo'), error = document.getElementById('nrError');
+  error.replaceChildren();
+  const video = body.video.trim();
+  if(video && video !== field.defaultValue && !LinksVideo.parse(video)){
+    document.getElementById('nrVideoPreview').innerHTML = fmtErr({ message:LinksVideo.message });
+    field.focus();
+    return;
+  }
+  body.video = video;
+  const buttons = error.nextElementSibling.querySelectorAll('button');
+  buttons.forEach(button => { button.disabled = true; });
   try{
     if(editingId) await API.patch('/recipes/' + editingId, { ...body, status: asDraft ? 'rascunho' : 'publicada' }); else await API.post('/recipes', body);
-    await loadCatalog(); D = await API.get('/dashboard'); window.draftRecipes = D.recipes.map(toFrontRecipe);
-    showToast(asDraft ? 'Receita salva como rascunho.' : 'Receita publicada no marketplace.'); dashTab = 'rec'; goToTab('dashboard');
-  }catch(e){ document.getElementById('nrError').innerHTML = fmtErr(e); }
+    const [catalog, dashboard] = await Promise.allSettled([loadCatalog(), API.get('/dashboard')]);
+    D = dashboard.status === 'fulfilled' ? dashboard.value : null;
+    window.draftRecipes = D?.recipes.map(recipe => toFrontRecipe(recipe)) || [];
+    const message = catalog.status === 'rejected'
+      ? 'Receita salva. Recarregue a página para atualizar o catálogo.'
+      : asDraft ? 'Receita salva como rascunho.' : 'Receita publicada no marketplace.';
+    showToast(message); dashTab = 'rec'; goToTab('dashboard');
+  }catch(e){ error.innerHTML = fmtErr(e); }
+  finally{ buttons.forEach(button => { button.disabled = false; }); }
 }
 
 /* ---------- administração: curadoria (RN01) ---------- */
@@ -359,8 +400,21 @@ async function adminAct(id, acao){
 
 /* ---------- tela da refeição: abas e avaliações ---------- */
 function switchTab(name, el){
-  document.querySelectorAll('.tab-panel').forEach(p => { p.hidden = p.dataset.p !== name; });
-  document.querySelectorAll('.tabs span').forEach(s => s.classList.toggle('active', s === el));
+  const detail = el.closest('.detail-main');
+  detail.querySelectorAll('.tab-panel').forEach(p => { p.hidden = p.dataset.p !== name; });
+  detail.querySelectorAll('.tabs button').forEach(button => {
+    button.classList.toggle('active', button === el);
+    button.setAttribute('aria-pressed', String(button === el));
+  });
+  const panel = detail.querySelector('[data-p="video"]');
+  if(name === 'video' && panel.dataset.recipe) loadLessonVideo(panel, panel.dataset.recipe);
+  else {
+    panel.querySelector('video')?.pause();
+    if(panel.dataset.recipe && panel.querySelector('iframe')){
+      panel.replaceChildren();
+      delete panel.dataset.state;
+    }
+  }
 }
 function reviewsHtml(r){
   const ps = communityPosts.filter(p => p.recipeId === r.id), rated = ps.filter(p => p.stars > 0), avg = rated.length ? rated.reduce((a, p) => a + p.stars, 0) / rated.length : 0;

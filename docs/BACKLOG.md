@@ -7,6 +7,7 @@
 | Cadastro e login, validações e perfil | RF05, RF07 | Testes Node, SQLite e adaptador Auth |
 | Cadastro pendente, termo e aprovação de criador | RF01, RN01, RN03 | Testes de curadoria e bloqueio |
 | Catálogo, rascunho, publicação, filtros e links diretos | RF02, RF08 | Testes de API e Chromium |
+| Prévia e player de videoaula com acesso autorizado | RF02, RNF02 | Chromium, SQLite, GoTrue e PostgREST locais |
 | Compra avulsa, cupom, assinatura e recusa simuladas | RF03, RN05 | SQLite, PostgreSQL isolado e Chromium |
 | Kit, raio simulado, retirada e painel de pedidos | RF04, RN02, RN03 | SQLite, PostgreSQL isolado e Chromium |
 | Checkout com preço e título definidos pelo catálogo | RF03, RF04 | Testes de checkout em três modos |
@@ -28,7 +29,7 @@
 
 | Prioridade | Item | Condição de aceite |
 |---|---|---|
-| Alta | Aplicar SQL e validar a revisão em um projeto Supabase de homologação | Testar com Auth real a compra, curadoria, kit, perfil e exclusão em conta descartável. |
+| Alta | Aplicar SQL e validar a revisão em um projeto Supabase de homologação | Repetir no projeto hospedado as verificações já executadas com GoTrue e PostgREST locais. |
 | Alta | Storage privado e verificação documental | Administrador autorizado consegue revisar diploma, CNPJ e alvará e registrar a decisão. |
 | Alta | Gateway real e cobrança recorrente | Confirmar pagamentos com webhook, idempotência, tratamento de duplicação e expiração da assinatura. |
 | Alta | Vídeo e conteúdo pago com acesso controlado por servidor | Servir conteúdo mediante autorização e URLs temporárias. |

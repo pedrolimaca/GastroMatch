@@ -11,6 +11,18 @@
 | SQL completo aplicado duas vezes, com catálogo, checkout e exclusão | Cinco grupos de verificações passaram | [Log](sprint-3/evidencias/postgres.txt) |
 | Chromium sobre SQLite | Cinco fluxos de interface passaram, sem erros de execução do JavaScript capturados | [Log](sprint-3/evidencias/chromium.txt) |
 
+## Revisão de videoaulas
+
+| Execução | Resultado | Evidência |
+|---|---|---|
+| Armazenamento local e SQLite | 29 cenários em cada ambiente, incluindo acesso à videoaula | [Local e adaptador](sprint-3/evidencias/revisao-video/local.txt) · [SQLite](sprint-3/evidencias/revisao-video/sqlite.txt) |
+| PostgreSQL (PGlite) | Migração reaplicada, com validação de URL e autorização da RPC de aula | [Log](sprint-3/evidencias/revisao-video/postgres.txt) |
+| GoTrue e PostgREST com PostgreSQL descartável | Migração aplicada duas vezes. Autenticação, compra, vídeo, kit, comunidade, senha e exclusão passaram | [Log](sprint-3/evidencias/revisao-video/auth-integracao.txt) |
+| Chromium | 18 rotas a 360, 768 e 1280 px. WebM reproduzido, publicação com prévia e vídeo liberado após compra. YouTube e Vimeo testados com o destino incorporado simulado | [Log](sprint-3/evidencias/revisao-video/browser.txt) |
+| Regressão Chromium | Catálogo, compra, PDF, retirada e exclusão | [Log](sprint-3/evidencias/revisao-video/browser-base.txt) |
+
+O [roteiro de homologação](sprint-3/HOMOLOGACAO.md) explica como reproduzir o teste com GoTrue e PostgREST reais e concluir a etapa hospedada.
+
 ## Casos e evidências
 
 | Caso | Resultado da revisão |
@@ -52,7 +64,7 @@ Use um Chromium instalado, indicando seu caminho em `CHROMIUM_BIN`. O teste de i
 
 ## Homologação da versão publicada
 
-O [registro histórico](EVIDENCIAS_SUPABASE.md) tem capturas de conta, compra e administração da versão anterior. A revisão atual ainda requer aplicação do SQL e do front em um projeto de homologação com Auth real. Use contas descartáveis e registre data, usuário de teste e resultado destes fluxos:
+O [registro histórico](EVIDENCIAS_SUPABASE.md) tem capturas de conta, compra e administração da versão anterior. A aplicação do SQL e do front no Supabase hospedado continua pendente. GoTrue e PostgREST reais já foram exercitados em contêineres locais. Use contas descartáveis e registre data, usuário de teste e resultado destes fluxos:
 
 1. Cadastro, autenticação e abertura da mesma conta em segundo navegador.
 2. Aprovação de criador, publicação e despublicação de receita.

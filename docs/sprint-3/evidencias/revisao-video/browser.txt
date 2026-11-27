@@ -1,0 +1,5 @@
+PASS  18 rotas públicas e portões de acesso em 360, 768 e 1280 px.
+PASS  Demonstração WebM reproduziu e pausou ao trocar de seção.
+PASS  Curadoria aprova uma criadora pendente pela interface.
+PASS  Prévia reproduziu um WebM. Link Vimeo, rascunho, publicação e visualização pelo criador.
+PASS  Compra simulada libera YouTube no celular e trocar de seção remove o player.

@@ -402,7 +402,7 @@ function renderHome(){
         <div class="story-steps">
           <div class="story-step"><span class="num">1</span><div><h4>Escolha o prato</h4><p>Navegue por receitas validadas por chefs com CNPJ e formação comprovada.</p></div></div>
           <div class="story-step"><span class="num">2</span><div><h4>Receba os ingredientes porcionados</h4><p>O restaurante prepara e envia o kit já higienizado, na medida exata da receita.</p></div></div>
-          <div class="story-step"><span class="num">3</span><div><h4>Acompanhe o chef</h4><p>Vídeo-aula passo a passo, com marca d'água e sem opção de download.</p></div></div>
+          <div class="story-step"><span class="num">3</span><div><h4>Acompanhe o chef</h4><p>Quando disponível, assista à videoaula e use o passo a passo com ficha em PDF.</p></div></div>
           <div class="story-step"><span class="num">4</span><div><h4>Finalize em casa</h4><p>Sem sobra de ingrediente, sem ida ao mercado no meio do preparo.</p></div></div>
           <div class="story-step"><span class="num">5</span><div><h4>Compartilhe o resultado</h4><p>Publique na comunidade e tire dúvidas direto com quem criou a receita.</p></div></div>
         </div>
@@ -462,12 +462,50 @@ function renderHome(){
 }
 
 /* -------- aba "Vídeo" da receita -------- */
-function videoPanelHtml(r){
-  const url = (r.video || IMG.heroVideo || '').trim();
-  const lock = '<svg class="icon" style="width:13px;height:13px" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="1"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>';
-  if(/^https?:\/\//i.test(url) && /\.(mp4|webm|ogg)(\?|$)/i.test(url)) return `<video class="hero-photo" style="height:220px" controls controlsList="nodownload noremoteplayback" disablePictureInPicture oncontextmenu="return false" poster="${esc(r.img)}" src="${esc(url)}"></video><p class="video-locked-note">${lock} Videoaula em reprodução</p>`;
-  if(/^https?:\/\//i.test(url)) return `<div class="locked-box"><b>Videoaula liberada</b>O chef publicou a aula em um link externo.<br><a class="link-inline" href="${esc(url)}" target="_blank" rel="noopener">Assistir à videoaula</a></div>`;
-  return '<div class="locked-box"><b>Videoaula em breve</b>O chef ainda não publicou o vídeo desta receita. Enquanto isso, siga o passo a passo na aba Receita.</div>';
+function videoPlayerHtml(source, poster = ''){
+  const alternative = source.url
+    ? `<a class="link-inline" href="${esc(source.url)}" target="_blank" rel="noopener">Abrir vídeo na origem</a>` : '';
+  if(source.type === 'embed') return `<div class="lesson-video">
+    <iframe title="Player da videoaula" src="${esc(source.src)}" allow="fullscreen; picture-in-picture"
+      referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+    <p>Se o provedor impedir a reprodução aqui, use o link. ${alternative}</p>
+    </div>`;
+  if(source.type === 'file') return `<div class="lesson-video">
+    <video controls playsinline preload="metadata" poster="${esc(poster)}" src="${esc(source.src)}"
+      aria-label="Player da videoaula" onerror="this.nextElementSibling.hidden=false"></video>
+    <p role="status" hidden>Não foi possível reproduzir este arquivo. Confira o link e o formato do vídeo.</p>
+    ${alternative}</div>`;
+  return `<div class="locked-box"><b>Vídeo hospedado externamente</b>${alternative}</div>`;
+}
+
+async function loadLessonVideo(panel, id){
+  if(panel.dataset.state) return;
+  const recipe = findRecipe(id);
+  if(!recipe || !isRecipeUnlocked(recipe)) return;
+  panel.dataset.state = 'loading';
+  panel.innerHTML = '<p role="status">Carregando videoaula…</p>';
+  try{
+    const original = recipe.legacyVideo || (await API.get('/recipes/' + id + '/video')).video;
+    const source = LinksVideo.parse(original, true);
+    if(!panel.isConnected) return;
+    panel.dataset.state = 'loaded';
+    panel.innerHTML = source ? videoPlayerHtml(source, recipe.img)
+      : '<div class="locked-box"><b>Videoaula indisponível</b>O link desta aula precisa ser atualizado pelo criador.</div>';
+  }catch(e){
+    if(!panel.isConnected) return;
+    delete panel.dataset.state;
+    panel.innerHTML = '<div class="locked-box" role="status"><b>Não foi possível carregar a videoaula</b>'
+      + esc(e.message) + '<br><button class="tiny-btn" type="button">Tentar novamente</button></div>';
+    panel.querySelector('button').addEventListener('click', () => loadLessonVideo(panel, id));
+  }
+}
+
+function lessonTabHtml(recipe, unlocked){
+  if(recipe.id === 'risoto-funghi') return '<p class="auth-sub">Demonstração ilustrada · Risoto de funghi</p>'
+    + videoPlayerHtml({ type:'file', src:'assets/risoto-demo.webm' }, recipe.img);
+  if(!recipe.hasVideo) return '<div class="locked-box"><b>Videoaula em breve</b>O criador ainda não adicionou um vídeo a esta receita.</div>';
+  if(!unlocked) return '<div class="locked-box"><b>Videoaula exclusiva</b>Desbloqueie a receita ou assine o catálogo para assistir.</div>';
+  return '';
 }
 
 /* -------- RF03: comercialização flexível -------- */
@@ -506,9 +544,13 @@ function renderRecipe(id){
         <div><b>${r.portions}</b><small>rende</small></div>
         <div><b>${r.rating}</b><small>avaliação</small></div>
       </div>
-      <div class="tabs" role="tablist"><span class="active" onclick="switchTab('receita',this)">Receita</span><span onclick="switchTab('video',this)">Vídeo</span><span onclick="switchTab('avaliacoes',this)">Avaliações</span></div>
+      <div class="tabs" role="group" aria-label="Seções da receita">
+        <button type="button" class="active" aria-pressed="true" onclick="switchTab('receita',this)">Receita</button>
+        <button type="button" aria-pressed="false" onclick="switchTab('video',this)">Vídeo</button>
+        <button type="button" aria-pressed="false" onclick="switchTab('avaliacoes',this)">Avaliações</button>
+      </div>
       <div class="tab-panel" data-p="receita">${bodyHtml}</div>
-      <div class="tab-panel" data-p="video" hidden>${unlocked ? videoPanelHtml(r) : '<div class="locked-box"><b>Videoaula protegida</b>desbloqueie comprando a receita ou assinando o catálogo</div>'}</div>
+      <div class="tab-panel" data-p="video" ${unlocked && r.hasVideo ? `data-recipe="${esc(r.id)}"` : ''} hidden>${lessonTabHtml(r, unlocked)}</div>
       <div class="tab-panel" data-p="avaliacoes" hidden>${reviewsHtml(r)}</div>
     </div>
     <div class="purchase-panel">
@@ -782,6 +824,7 @@ function renderRegisterAmador(){
   return `<div class="auth-wrap"><div class="auth-card">
     <button class="back-link" onclick="goToTab('register-choice')"><svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> voltar</button>
     <h1 class="auth-title">Cadastro, Cozinheiro Amador</h1>
+    ${localModeMessage()}
     <p class="auth-sub">Registro simples - navegue pelo catálogo, compre aulas e kits.</p>
     <div class="field"><label>Nome</label><input id="regName" placeholder="Seu nome completo"></div>
     <div class="field"><label>E-mail</label><input id="regEmail" type="email" placeholder="voce@email.com"></div>
@@ -797,6 +840,7 @@ function renderRegisterCriador(){
   return `<div class="auth-wrap" style="max-width:520px"><div class="auth-card">
     <button class="back-link" onclick="goToTab('register-choice')"><svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> voltar</button>
     <h1 class="auth-title">Cadastro, Chef / Restaurante</h1>
+    ${localModeMessage()}
     <p class="auth-sub">Curadoria profissional - apenas chefs com formação comprovada ou restaurantes com CNPJ ativo podem publicar conteúdo monetizado.</p>
     <div class="field"><label>Tipo de perfil</label><select id="regTipo"><option value="chef">Chef Profissional</option><option value="restaurante">Restaurante</option></select></div>
     <div class="field"><label>Nome / Razão social</label><input id="regCName" placeholder="Ex: Osteria Torino"></div>
