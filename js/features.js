@@ -26,7 +26,7 @@ function ensureChef(id, name, raio){
 function toFrontRecipe(r){
   const kit = r.ingredientes && r.ingredientes.length ? r.ingredientes.map(i => [esc(i), '']) : [['Ingredientes a definir', '']];
   return { id:r.id, custom:true, name:esc(r.name), chef:r.chefId, time:esc(r.time), minutes:r.minutes, difficulty:'média', portions:'2 pessoas', price:r.price,
-    cat:r.categoria || 'alta', rating:0, reviews:0, kitPrice:r.kitPrice || 0, kitsLeft:5, img:r.img || IMG.risoto, restricao:r.restricao, kit,
+    cat:r.categoria || 'alta', rating:0, reviews:0, kitPrice:r.kitPrice || 0, kitsLeft:5, img:r.img || IMG.risoto, video:r.video || '', restricao:r.restricao, kit,
     instrucoes: r.instrucoes && r.instrucoes.length ? r.instrucoes.map(esc) : [esc(r.desc) || 'Modo de preparo em edição.'],
     testi:{ quote:'Em breve as primeiras avaliações.', name:'GastroMatch' }, status:r.status };
 }
@@ -39,7 +39,11 @@ async function loadCatalog(){
   communityPosts.length = 0; communityPosts.push(...posts);
 }
 async function bootstrap(){
-  try{ await API.init(); await loadSession(); await loadCatalog(); }catch(e){ console.error(e); }
+  try{
+    await API.init();
+    const results = await Promise.allSettled([loadSession(), loadCatalog()]);
+    if(results.some(result => result.status === 'rejected')) showToast('Alguns dados estão indisponíveis. Recarregue para tentar novamente.');
+  }catch(e){ showToast('Não foi possível iniciar a conexão. Recarregue para tentar novamente.'); }
   render();
 }
 const ownsRecipe = r => !!currentUser && (currentUser.kind === 'admin' || (currentUser.creator && currentUser.creator.chefId === r.chef));
@@ -58,7 +62,7 @@ function renderAuthArea(){
     if(dr) dr.innerHTML = `<button class="ghost" onclick="closeDrawer(); goToTab('login')">Entrar</button><button class="primary" onclick="closeDrawer(); goToTab('register-choice')">Criar conta</button>`;
   }
 }
-async function logout(){ try{ await API.post('/auth/logout'); }catch(e){} currentUser = null; unlockedRecipes.clear(); subscribedChefs.clear(); D = null; adminData = null; renderAuthArea(); showToast('Você saiu da sua conta.'); goToTab('home'); }
+async function logout(){ try{ await API.post('/auth/logout'); }catch(e){} currentUser = null; unlockedRecipes.clear(); subscribedChefs.clear(); D = null; window.draftRecipes = []; adminData = null; renderAuthArea(); showToast('Você saiu da sua conta.'); goToTab('home'); }
 
 /* ---------- login e cadastro (RF01 / RF05) ---------- */
 function renderLogin(){
@@ -70,11 +74,11 @@ function renderLogin(){
     <div id="loginError"></div>
     <button class="auth-submit" id="loginBtn" onclick="doLogin()">Entrar</button>
     <p class="auth-switch">Não tem conta? <span class="link-inline" onclick="goToTab('register-choice')">Criar conta</span></p>
-    <div class="demo-box"><b>Contas de teste</b>
+    ${API.mode() !== 'supabase' ? `<div class="demo-box"><b>Contas de teste</b>
       <span class="link-inline" onclick="fillLogin('marina@email.com','123456')">Cozinheira</span>,
       <span class="link-inline" onclick="fillLogin('chef@gastromatch.com','chef123')">Chef aprovado</span>,
       <span class="link-inline" onclick="fillLogin('beatriz@email.com','123456')">Chef pendente</span>,
-      <span class="link-inline" onclick="fillLogin('admin@gastromatch.com','admin123')">Administrador</span></div>
+      <span class="link-inline" onclick="fillLogin('admin@gastromatch.com','admin123')">Administrador</span></div>` : ''}
   </div></div>`;
 }
 function fillLogin(e, p){ document.getElementById('loginEmail').value = e; document.getElementById('loginPass').value = p; }
@@ -126,18 +130,19 @@ function toggleStep(el){ el.classList.toggle('done'); }
 /* ---------- pagamento simulado (RF03 / RN05) ---------- */
 const money = n => 'R$ ' + Number(n).toFixed(2).replace('.', ',');
 function openPayment(ctx){
+  if(payCtx) return;
   payCtx = ctx; payMetodo = 'cartao'; payCupom = '';
   const b = document.createElement('div'); b.className = 'modal-backdrop'; b.id = 'payBackdrop'; b.innerHTML = '<div class="modal-box" id="payBox"></div>';
   b.addEventListener('click', ev => { if(ev.target === b) closePayment(); });
   document.body.appendChild(b); paintPayment();
 }
-function closePayment(){ const b = document.getElementById('payBackdrop'); if(b) b.remove(); payCtx = null; }
-function payTotal(){ const d = API.CUPONS[payCupom] || 0; return +(payCtx.amount * (1 - d)).toFixed(2); }
+function closePayment(){ if(document.getElementById('payBtn')?.disabled) return; const b = document.getElementById('payBackdrop'); if(b) b.remove(); payCtx = null; }
+function payTotal(){ return Checkout.total(payCtx.amount, payCupom); }
 function paintPayment(msg){
   const box = document.getElementById('payBox'); if(!box) return;
-  box.innerHTML = `<h3>Pagamento</h3><p class="auth-sub">${payCtx.title}</p>
+  box.innerHTML = `<h3>Pagamento simulado</h3><p class="auth-sub">${payCtx.title}</p>
     <div class="chip-row"><div class="chip ${payMetodo === 'cartao' ? 'on' : ''}" onclick="payMetodo='cartao';paintPayment()">Cartão</div><div class="chip ${payMetodo === 'pix' ? 'on' : ''}" onclick="payMetodo='pix';paintPayment()">PIX</div></div>
-    ${payMetodo === 'cartao' ? `<div class="field"><label for="payCard">Número do cartão</label><input id="payCard" inputmode="numeric" maxlength="19" placeholder="4242 4242 4242 4242"><small class="hint">Teste: cartão terminado em 0000 simula pagamento recusado.</small></div>` : '<p class="auth-sub">PIX simulado: a confirmação é imediata ao clicar em pagar.</p>'}
+    ${payMetodo === 'cartao' ? `<div class="field"><label for="payCard">Número do cartão</label><input id="payCard" inputmode="numeric" maxlength="19" placeholder="4242 4242 4242 4242"><small class="hint">Use apenas números fictícios. Final 0000 simula uma recusa.</small></div>` : '<p class="auth-sub">PIX simulado: a confirmação é imediata ao clicar em pagar.</p>'}
     <div class="field"><label for="payCupom">Cupom de desconto</label><div style="display:flex;gap:8px"><input id="payCupom" value="${esc(payCupom)}" placeholder="GASTRO10" style="flex:1"><button class="tiny-btn" onclick="applyCupom()">aplicar</button></div></div>
     <div class="total-row"><span>Total</span><b>${money(payTotal())}</b></div>
     <div id="payError">${msg || ''}</div>
@@ -145,21 +150,39 @@ function paintPayment(msg){
 }
 function applyCupom(){
   const v = document.getElementById('payCupom').value.trim().toUpperCase();
-  if(v && !API.CUPONS[v]){ payCupom = ''; paintPayment('<div class="field-error">Cupom inválido.</div>'); return; }
+  if(v && !Object.hasOwn(API.CUPONS, v)){ payCupom = ''; paintPayment('<div class="field-error">Cupom inválido.</div>'); return; }
   payCupom = v; paintPayment(v ? '<div class="geo-ok"><span class="geo-dot"></span> cupom aplicado</div>' : '');
 }
 async function confirmPayment(){
-  const c = payCtx, card = payMetodo === 'cartao' ? document.getElementById('payCard').value : '', btn = document.getElementById('payBtn');
-  if(payMetodo === 'cartao' && card.replace(/\s/g, '').length < 13){ document.getElementById('payError').innerHTML = '<div class="field-error">Informe o número do cartão (13 a 19 dígitos).</div>'; return; }
-  btn.disabled = true; btn.textContent = 'Processando...';
+  const c = payCtx;
+  const btn = document.getElementById('payBtn');
+  if(!c || btn.disabled) return;
+  const card = payMetodo === 'cartao' ? document.getElementById('payCard').value : '';
+  const error = document.getElementById('payError');
+  if(payMetodo === 'cartao' && !/^\d{13,19}$/.test(card.replace(/\s/g, ''))){
+    error.innerHTML = '<div class="field-error">Informe o número do cartão (13 a 19 dígitos).</div>';
+    return;
+  }
+  const fieldset = document.getElementById('payBox');
+  btn.disabled = true;
+  btn.textContent = 'Processando...';
+  fieldset.inert = true;
   try{
     await API.post('/checkout', { ...c.body, amount:c.amount, metodo:payMetodo, card, cupom:payCupom });
-    closePayment(); await loadSession(); showToast(c.okMsg);
-    if(c.after) c.after(); else render();
   }catch(e){
-    const txt = e.status === 402 ? 'Erro 402: ' + e.message : e.message;
-    paintPayment('<div class="field-error">' + esc(txt) + '</div>');
+    error.innerHTML = fmtErr(e.status === 402 ? { message:'Erro 402: ' + e.message } : e);
+    return;
+  }finally{
+    fieldset.inert = false;
+    btn.disabled = false;
+    btn.textContent = 'Pagar agora';
   }
+
+  closePayment();
+  try{ await loadSession(); }
+  catch(e){ showToast('Operação registrada. Recarregue a página para atualizar a conta.'); return; }
+  showToast(c.okMsg);
+  if(c.after) c.after(); else render();
 }
 function buyRecipe(id){
   requireLogin(() => {
@@ -175,12 +198,14 @@ function subscribeChef(chefId){
   });
 }
 function startKitPayment(recipeId){
-  const r = recipeById(recipeId);
+  const r = recipes.find(recipe => recipe.id === recipeId);
+  if(!r || r.kitPrice <= 0){ showToast('Kit indisponível.'); return; }
   if(!currentUser || currentUser.kind !== 'amador'){ showToast('Entre com uma conta de cozinheiro amador para pedir o kit.'); return; }
   if(!document.getElementById('terms').checked){ showToast('É obrigatório aceitar as normas da Vigilância Sanitária para prosseguir.'); return; }
-  const slot = (document.querySelector('.chip-row .chip.on') || {}).textContent || '', retirada = /Retirar/.test(slot), cep = (document.getElementById('cepInput').value || '').replace(/\D/g, '');
+  const option = document.querySelector('#kitSlots .chip.on');
+  const slot = option.textContent, retirada = option.hasAttribute('data-pickup'), cep = (document.getElementById('cepInput').value || '').replace(/\D/g, '');
   openPayment({ title:'Kit de ingredientes: ' + r.name, amount:r.kitPrice, okMsg:'Pedido confirmado. Que tal compartilhar o resultado na comunidade?', after:() => goToTab('community'),
-    body:{ type:'kit', refId:recipeId, recipeName:r.name, chefId:r.chef, entrega: retirada ? 'retirada' : 'entrega', slot, cep, raio:parseFloat(chefs[r.chef].radius) || 5, termo:true } });
+    body:{ type:'kit', refId:recipeId, chefId:r.chef, entrega: retirada ? 'retirada' : 'entrega', slot, cep, termo:true } });
 }
 
 /* ---------- comunidade (RF06) ---------- */
@@ -258,10 +283,19 @@ async function saveRaio(){
 /* ---------- cadastro e edição de receitas (RF02 / RN01) ---------- */
 function renderNewRecipe(id){
   if(!currentUser || currentUser.kind !== 'criador') return renderLoginGate('publicação de receitas');
-  if(!D || (id && !D.recipes.find(r => r.id === id))){ API.get('/dashboard').then(d => { D = d; render(); }).catch(() => {}); return '<div class="wrap" style="padding-top:140px"><p class="auth-sub">Carregando...</p></div>'; }
+  if(!D){
+    API.get('/dashboard').then(d => {
+      D = d;
+      if(currentPage === 'new-recipe') render();
+    }).catch(e => {
+      if(currentPage === 'new-recipe') document.getElementById('recipeLoad').textContent = e.message;
+    });
+    return '<div class="wrap" style="padding-top:140px"><p id="recipeLoad" class="auth-sub">Carregando...</p></div>';
+  }
   if(D.creator.status !== 'APROVADO') return `<div class="wrap" style="padding-top:140px;max-width:520px;text-align:center"><h2 style="font-family:'Fraunces',serif;font-size:22px;font-weight:500">Perfil ainda não aprovado</h2><p class="auth-sub">A publicação de receitas é liberada somente após a aprovação da curadoria.</p><button class="btn-primary" onclick="goToTab('dashboard')">Voltar ao painel</button></div>`;
   editingId = id || null;
   const r = id ? D.recipes.find(x => x.id === id) : { name:'', desc:'', restricao:'sem restrição', minutes:'', price:'', kitPrice:'', video:'', ingredientes:[], instrucoes:[], img:'' };
+  if(!r) return unavailableRecipe('Receita indisponível para edição');
   nrImg = r.img || '';
   const opts = ['sem restrição', 'vegano', 'vegetariano', 'sem glúten', 'sem lactose', 'zero açúcar'].map(o => `<option ${o === r.restricao ? 'selected' : ''}>${o}</option>`).join('');
   return `<div class="auth-wrap" style="max-width:600px"><button class="back-link" onclick="goToTab('dashboard')">voltar ao painel</button><div class="auth-card">
@@ -312,7 +346,7 @@ function paintAdmin(){
   const root = document.getElementById('admin-root'); if(!root || !adminData) return;
   const A = adminData, pend = A.creators.filter(c => c.status === 'PENDENTE').length, tabs = [['cur', 'Curadoria'], ['usr', 'Usuários'], ['tx', 'Transações']];
   let b = '';
-  if(adminTab === 'cur') b = `<div class="table-scroll"><table class="data-table"><tr><th>Criador</th><th>Tipo</th><th>Documento</th><th>Termo sanitário</th><th>Status</th><th></th></tr>${A.creators.map(c => `<tr><td>${esc(c.user.name)}<br><small>${esc(c.user.email)}</small></td><td>${esc(c.tipo)}</td><td><span class="link-inline" onclick="showToast('Abrindo ${esc(c.doc)}')">${esc(c.doc)}</span></td><td>${c.termo ? 'Aceito' : 'Não'}</td><td>${pill(c.status)}</td><td class="acts">${c.status === 'PENDENTE' ? `<span class="link-inline" onclick="adminAct(${c.id},'approve')">aprovar</span><span class="link-inline" onclick="adminAct(${c.id},'reject')">rejeitar</span>` : ''}</td></tr>`).join('')}</table></div>`;
+  if(adminTab === 'cur') b = `<div class="table-scroll"><table class="data-table"><tr><th>Criador</th><th>Tipo</th><th>Documento</th><th>Termo sanitário</th><th>Status</th><th></th></tr>${A.creators.map(c => `<tr><td>${esc(c.user.name)}<br><small>${esc(c.user.email)}</small></td><td>${esc(c.tipo)}</td><td>${esc(c.doc)}</td><td>${c.termo ? 'Aceito' : 'Não'}</td><td>${pill(c.status)}</td><td class="acts">${c.status === 'PENDENTE' ? `<span class="link-inline" onclick="adminAct(${c.id},'approve')">aprovar</span><span class="link-inline" onclick="adminAct(${c.id},'reject')">rejeitar</span>` : ''}</td></tr>`).join('')}</table></div>`;
   if(adminTab === 'usr') b = `<div class="table-scroll"><table class="data-table"><tr><th>Nome</th><th>E-mail</th><th>Perfil</th></tr>${A.users.map(u => `<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${KIND_LABEL[u.kind]}</td></tr>`).join('')}</table></div>`;
   if(adminTab === 'tx') b = A.tx.length ? `<div class="table-scroll"><table class="data-table"><tr><th>#</th><th>Data</th><th>Tipo</th><th>Valor</th><th>Status</th></tr>${A.tx.map(t => `<tr><td>${t.id}</td><td>${t.date}</td><td>${t.type}</td><td>${money(t.valor)}</td><td>${pill(t.status)} (${t.http})</td></tr>`).join('')}</table></div>` : '<p class="empty-note">Nenhuma transação registrada.</p>';
   root.innerHTML = `<h2 class="dash-title">Administração</h2><div class="rev-cards"><div class="rev-card"><small>criadores pendentes</small><b>${pend}</b></div><div class="rev-card"><small>usuários</small><b>${A.users.length}</b></div><div class="rev-card"><small>transações</small><b>${A.tx.length}</b></div></div>

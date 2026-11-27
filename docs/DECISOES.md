@@ -63,3 +63,10 @@
 ## Espaço para a equipe
 
 Acrescentar aqui as dificuldades e decisões do grupo ao longo da semana (por exemplo, divisão de tarefas, conflitos de merge e combinados com o professor).
+
+## Revisão da Sprint 3
+
+- A aplicação prioriza a API Node na mesma origem. Assim, o roteiro local da Mostra usa um SQLite descartável mesmo com Supabase configurado no front.
+- O checkout consulta o catálogo e confirma o vínculo com um criador aprovado. O PostgreSQL guarda os preços do catálogo-base em `catalogo_demo`. O teste SQL confere esses registros contra o catálogo compartilhado por Node e navegador.
+- A exclusão em PostgreSQL passou a exigir a senha atual na função SQL. A migração substitui a assinatura anterior e deve acompanhar a atualização do front.
+- O [relatório](TESTES.md) descreve as execuções da revisão. O [registro de limitações](sprint-3/LIMITACOES.md) mantém as diferenças entre o MVP e o cenário de produção.

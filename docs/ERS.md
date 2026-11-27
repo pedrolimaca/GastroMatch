@@ -1,78 +1,61 @@
-# Especificação de Requisitos de Software (ERS) - GastroMatch
+# Especificação de requisitos — GastroMatch, Sprint 3
 
-## 1. Introdução
+**Equipe** — Kauan Alejandro da Rosa, Pedro de Lima Cavalcanti e Renan Ramos Capeleti
+**Curso** — Análise e Desenvolvimento de Sistemas, SENAI Taubaté
+**Orientação** — Prof. Wesley Fioreze
+**Referências de requisitos** — GastroMatch Sprint 1 e GastroMatch ERS Sprint 2, fornecidos pela equipe.
 
-**Propósito.** Descrever o que o GastroMatch faz e como cada requisito foi verificado.
-**Escopo.** Plataforma web que conecta chefs e restaurantes profissionais a cozinheiros amadores, reunindo: venda de videoaulas e receitas (compra avulsa ou assinatura), kits de ingredientes com entrega restrita por distância, comunidade com avaliações e curadoria sanitária dos criadores.
-**Entregas.** Sprint 1 e Sprint 2, mais a integração com o banco na nuvem (Supabase), o catálogo de receitas, a tela de perfil e a exclusão de conta.
+## Propósito e escopo
 
-## 2. Visão geral
+O GastroMatch é uma aplicação web responsiva que permite descobrir receitas, acessar instruções e videoaulas, solicitar kits e interagir com criadores. O MVP usa pagamentos e logística demonstrativos. O catálogo inicial combina receitas de demonstração com receitas publicadas pelos criadores. SQLite é a referência para execução local e avaliação. PostgreSQL com Supabase Auth é o caminho de publicação com dados compartilhados.
 
-**Perfis de usuário**
-
-| Perfil | O que faz |
+| Ator | Responsabilidade |
 |---|---|
-| Cozinheiro amador | Navega, compra aulas e kits, usa o modo cozinha, publica pratos e dúvidas |
-| Chef ou restaurante (criador) | Cadastra-se, aguarda aprovação, publica receitas e kits, acompanha vendas e responde à comunidade |
-| Administrador | Faz a curadoria dos criadores e consulta usuários e transações |
+| Visitante | Consultar catálogo, perfis públicos e comunidade, criar conta e autenticar-se |
+| Cozinheiro amador | Simular compra ou assinatura, acessar conteúdo, pedir kit e interagir na comunidade |
+| Chef ou restaurante | Solicitar aprovação, manter receitas e kits, acompanhar pedidos e responder dúvidas |
+| Administrador | Decidir a curadoria e consultar indicadores de usuários, receitas e transações |
 
-**Restrições.** Aplicação web responsiva (celular e desktop); três modos de dados: Supabase (PostgreSQL na nuvem, usado na versão publicada), servidor Node com SQLite (`npm start`) e modo local no navegador (plano B); pagamento simulado nesta entrega.
-Diagramas: `docs/diagramas/casos-de-uso.png`, `fluxo.png`, `arquitetura.png`, `der.png`.
+## Requisitos funcionais
 
-## 3. Requisitos funcionais
-
-| Código | Requisito | Critério de aceite | Onde |
-|---|---|---|---|
-| RF01 | Cadastro de chef ou restaurante com documento (diploma ou CNPJ/alvará) e termo sanitário | Sem termo ou sem documento o envio é bloqueado; cadastro nasce PENDENTE DE VALIDAÇÃO | `doRegisterCriador`, `POST /auth/register` |
-| RF02 | Publicar receitas, com rascunho, e filtrar a vitrine por restrição alimentar, tempo e categoria | Rascunho não aparece na vitrine; filtros combinam | `publishRecipe`, `filteredRecipes`, `POST /recipes` |
-| RF03 | Comercialização de receita avulsa (pay-per-view) e assinatura, com cupom e registro financeiro | Pagamento aprovado libera o acesso e grava a transação | `openPayment`, `POST /checkout` |
-| RF04 | Kit de ingredientes com validação de CEP por raio de entrega | Fora do raio: oferece retirada ou só a aula | `checkCep`, `GEO.distanceKm`, `POST /checkout` |
-| RF05 | Cadastro e login do cozinheiro amador | Valida nome, e-mail, senha e duplicidade | `doRegisterAmador`, `doLogin` |
-| RF06 | Comunidade: foto, nota de 1 a 5 e dúvidas respondidas pelo restaurante | Resposta do chef aparece no post | `submitPost`, `replyPost` |
-| RF07 | Perfil do usuário (cozinheiro, criador e administrador): ver atividade, alterar nome e senha | Nome com menos de 3 letras e senha atual errada são recusados; a nova senha exige 6 caracteres | `renderProfile`, `PATCH /me`, `POST /me/password` |
-| RF08 | Catálogo de receitas com busca por nome, chef ou ingrediente, filtro por categoria, restrição, preparo e preço, e ordenação | A busca ignora acentos e maiúsculas; filtros combinam; sem resultado mostra aviso e permite limpar | `renderRecipes`, `filteredRecipes` (`js/pages.js`) |
-| RF09 | Excluir a própria conta e todos os dados (privacidade) | Exige a senha e a palavra EXCLUIR; apaga cadastro, compras, pedidos, posts e, para criador, receitas, kits, assinaturas e respostas; o e-mail fica livre; administrador não exclui a própria conta | `deleteAccount`, `POST /me/delete` |
-
-## 4. Regras de negócio
-
-| Código | Regra |
-|---|---|
-| RN01 | Só criadores APROVADOS pelo administrador publicam receitas e cadastram kits |
-| RN02 | Kit é entregue somente dentro do raio do restaurante (1 a 15 km); fora dele há retirada ou só a aula |
-| RN03 | Termo sanitário é obrigatório no cadastro do criador e no pedido de kit |
-| RN05 | Pagamento recusado devolve 402 "Transação não autorizada", registra a transação e não libera acesso |
-
-Observação: a RN04 não aparece nos documentos recebidos. Se existir na versão oficial da equipe, incluir aqui e no backlog.
-
-## 5. Requisitos não funcionais
-
-| Código | Requisito | Situação |
+| ID | Requisito | Critério de aceite e situação no MVP |
 |---|---|---|
-| RNF02 | Conteúdo pago acessível só a quem comprou, assinou ou é dono | Atendido (vídeo é demonstração) |
-| RNF03 | Ficha técnica em PDF com marca d'água do e-mail de quem baixou | Atendido |
-| RNF04 | Modo cozinha: fonte ajustável, checklist de ingredientes e passos clicáveis | Atendido |
-| RNF-R | Responsividade em 360, 768 e 1280 px sem rolagem lateral | Atendido (auditoria automática) |
-| RNF-S | Senha armazenada com hash (scrypt no servidor Node; Supabase Auth no Supabase), sessão com token assinado, texto de usuário escapado | Atendido |
-| RNF-D | Dados compartilhados entre aparelhos: no Supabase, as tabelas têm RLS ligado e sem políticas; o site só acessa o banco por funções `gm_*` que conferem o usuário logado | Atendido (verificado com dados reais, ver `docs/EVIDENCIAS_SUPABASE.md`) |
-| RNF-C | Continuidade: se o Supabase não responder, o site usa o modo local | Atendido (teste de navegador sem rede) |
-| RNF-P | Privacidade: o titular pode excluir a conta e todos os dados pela tela de perfil | Atendido nos modos local e servidor; no Supabase falta o teste manual (ver `docs/EVIDENCIAS_SUPABASE.md`) |
+| RF01 | Cadastro e validação do criador | Nome, e-mail, senha, tipo, referência do comprovante, termo sanitário e raio de 1 a 15 km. Nasce pendente e só publica após decisão do administrador. Parcial em relação à Sprint 1, pois apenas o nome do documento é armazenado. |
+| RF02 | Marketplace de receitas e videoaulas | O criador aprovado publica, edita, despublica ou salva rascunhos. A vitrine exibe receitas publicadas de criadores aprovados. Aceita link HTTPS/HTTP de videoaula. Implementado no escopo MVP. |
+| RF03 | Compra avulsa e assinatura | O checkout valida o item, consulta o preço, aplica cupom e registra a transação. Aprovação avulsa libera a receita e assinatura libera o catálogo do criador. Parcial em relação à Sprint 1, pois cobrança e recorrência reais estão pendentes. |
+| RF04 | Venda e logística de kits | Receita precisa ter kit precificado. Com termo aceito, entrega exige CEP dentro do raio demonstrativo. Retirada dispensa o CEP. O criador acompanha o pedido. Parcial em relação à Sprint 1, pois a geocodificação é simulada e não há estoque real. |
+| RF05 | Cadastro e acesso do amador | Cadastro valida nome (mínimo 3 caracteres), e-mail e senha (mínimo 6). Login inválido é recusado. Cadastro válido inicia sessão quando a confirmação por e-mail está desligada. Implementado. |
+| RF06 | Comunidade | Entrar, publicar texto com foto opcional e nota de 1 a 5, ou dúvida sem nota. Criador aprovado responde em seu próprio catálogo. Implementado no escopo MVP. |
+| RF07 | Perfil da conta | Exibir atividade de acordo com o perfil, atualizar nome e trocar senha mediante a senha atual no fluxo da interface. Implementado. |
+| RF08 | Catálogo e filtros | Buscar por nome, chef ou ingrediente, sem distinção de acentos ou caixa. Permitir combinar categoria, restrição, tempo e preço, ordenar e limpar filtros. Links diretos preservam a página ao recarregar. Implementado. |
+| RF09 | Exclusão da conta | Exigir senha atual e confirmação literal EXCLUIR. Remover a conta, compras e publicações próprias e limpar vínculos de acesso, assinaturas e respostas de criadores excluídos. Administrador é tratado fora desse fluxo. Verificado em SQLite e PostgreSQL com Auth simulado. |
 
-## 6. Rastreabilidade
+RF07–RF09 foram incorporados no repositório após a especificação inicial. O registro financeiro de terceiros e seus pedidos históricos podem conservar a referência de uma receita removida.
 
-| Requisito | Teste automatizado (`tests/api.test.js`) |
-|---|---|
-| RF01, RN01, RN03 | cadastro de criador exige termo e documento; criador novo fica PENDENTE e não publica (403); só admin acessa a curadoria; admin aprova |
-| RF02 | rascunho não aparece na vitrine; publicar e despublicar; preço e tempo obrigatórios |
-| RF03, RN05 | cartão recusado gera 402 sem liberar acesso; cupom inválido e cupom GASTRO10; assinatura libera o catálogo |
-| RF04, RN02 | kit fora do raio é bloqueado; retirada gera pedido; chef altera o raio |
-| RF05 | validação de nome, e-mail e senha; e-mail duplicado; login incorreto retorna 401 |
-| RF06 | post com nota e dúvida; comentário vazio bloqueado; chef responde |
-| Segurança | rotas protegidas retornam 401 sem login; chef não edita receita de outro criador |
+## Regras de negócio
 
-Os mesmos 27 testes de `tests/api.test.js` rodam no modo local e contra o banco SQLite (`docs/evidencias-testes-*.txt`). Os 15 testes de `tests/supabase.test.js` conferem o adaptador do Supabase com um Supabase simulado. O SQL de `server/supabase.sql` só executa no Supabase de verdade e por isso foi verificado por teste manual (`docs/EVIDENCIAS_SUPABASE.md`).
+| ID | Regra | Aplicação |
+|---|---|---|
+| RN01 | Curadoria profissional | Só criadores aprovados publicam e vendem. A validação efetiva do diploma, CNPJ e alvará fica com a curadoria, que no protótipo recebe apenas a referência do arquivo. |
+| RN02 | Raio de entrega | Bloqueio de entrega fora do raio configurado (1 a 15 km). Retirada é oferecida como alternativa. |
+| RN03 | Conformidade sanitária | Termo obrigatório no cadastro do criador e na simulação do pedido do kit. |
+| RN04 | Porcionamento e aproveitamento | Receitas-base exibem quantidades por item. Receitas de criadores aceitam quantidades em texto. Falta exigir porção estruturada e instruções de aproveitamento. |
+| RN05 | Pagamento recusado | A transação é registrada como RECUSADA, sem acesso ou pedido. A API Node retorna 402, e o adaptador Supabase converte o indicador de recusa em 402 para a interface. |
 
-| Requisito | Teste |
-|---|---|
-| RF07 | `Perfil: usuário altera o nome...` e `Perfil: troca de senha exige a senha atual...` |
-| RF09, RNF-P | `Privacidade: excluir conta exige senha e a palavra EXCLUIR e apaga todos os dados da pessoa` e `Privacidade: criador que exclui a conta leva receitas, assinaturas e respostas; administrador não exclui a própria` |
-| RF08, RNF-C | verificação em navegador (busca, categorias, filtros, ordenação e queda para o modo local) |
+## Requisitos não funcionais
+
+| ID | Requisito | Situação |
+|---|---|---|
+| RNF01 | Web e aplicativo móvel | Web responsiva. Aplicativo móvel separado permanece futuro. |
+| RNF02 | Proteção de vídeo pago | Interface exibe vídeo apenas após liberação. Conteúdos e links públicos e controles do player são insuficientes para proteção contra cópia. Hospedagem privada fica para evolução. |
+| RNF03 | Marca d’água em PDF | Ficha de receita liberada usa o e-mail da conta autenticada. A geração depende do jsPDF carregado por CDN. |
+| RNF04 | Modo cozinha | Checklist de ingredientes, marcação de passos e tamanho de texto ajustável. |
+| RNF-R | Responsividade | Catálogo e checkout exercitados no Chromium. Checkout conferido a 390 px na revisão. |
+| RNF-S | Conta e sessão | Node usa scrypt e token HMAC. Na nuvem, Supabase Auth e RLS com operações mediadas por RPC. O modo local foi concebido para demonstração individual. |
+| RNF-D | Persistência compartilhada | SQLite no servidor e PostgreSQL na publicação configurada. O armazenamento local fica isolado no navegador. |
+| RNF-C | Continuidade | O site pode iniciar em modo local quando o servidor e o Supabase estão indisponíveis. |
+| RNF-P | Privacidade | Exclusão de conta conforme RF09. Confirmação de senha aplicada no SQLite e na função SQL do PostgreSQL. |
+
+## Validação
+
+A [matriz final](sprint-3/MATRIZ.md) liga requisitos, implementação, testes e Unidades Curriculares. A [modelagem](diagramas/README.md) contém casos de uso, classes do domínio, modelos de dados, arquitetura, quatro sequências e duas atividades. O [relatório](TESTES.md) identifica os ambientes e a cobertura real. As decisões de escopo estão no [backlog](BACKLOG.md) e nas [limitações](sprint-3/LIMITACOES.md).

@@ -1,65 +1,50 @@
 # GastroMatch
 
-Plataforma de experiências gastronômicas que conecta usuários a chefs e restaurantes por meio de receitas exclusivas, técnicas profissionais, videoaulas e experiências gastronômicas.
+O GastroMatch conecta cozinheiros amadores a chefs e restaurantes por meio de receitas, videoaulas, kits de ingredientes e uma comunidade. Esta versão acadêmica demonstra o fluxo completo de navegação, curadoria, publicação e compras simuladas.
 
-## Telas
+## Executar
 
-- **Home:** hero, busca, categorias, receitas em destaque, restaurantes próximos, chefs e parceiros.
-- **Receitas (`#recipes`):** catálogo completo com banner por categoria, busca por nome, chef ou ingrediente, filtros de restrição, preparo e preço, e ordenação.
-- **Receita, Chef, Checkout do kit e Comunidade.**
-- **Perfil (`#profile`):** para cozinheiro, criador e administrador. Edita nome e senha, mostra atividade, curadoria ou números da plataforma (conforme o tipo de conta) e permite **excluir a conta e todos os dados** (pede a senha e a palavra EXCLUIR).
-- **Painel do criador e Administração.**
-- **Ajuda, Contato, Termos e Privacidade.**
+Com Node.js 22.5 ou posterior, na raiz do repositório:
 
-## Estrutura
-
-| Pasta/arquivo | Função |
-|---|---|
-| `index.html`, `css/style.css` | Esqueleto, menus, rodapé e estilos |
-| `js/script.js` | Dados base, roteador, tema escuro, Home, Receita, Chef, Checkout, Comunidade e Cadastro |
-| `js/features.js` | Login, cadastro, painel do criador, administração, pagamento, modo cozinha e proximidade |
-| `js/pages.js` | Catálogo de receitas (busca e filtros), perfil e páginas de informação |
-| `js/api.js` | Camada de dados (modos Supabase, servidor ou local) |
-| `js/supabase.js` | Adaptador do Supabase (login, dados e regras via funções SQL) |
-| `js/geo.js` | CEP, distância e raio de entrega (compartilhado com o servidor) |
-| `js/config.js` | Endereço da API (`GM_API_BASE`) |
-| `server/` | API Node + banco SQLite (`schema.sql`) e scripts do Supabase (`supabase.sql`, `supabase-contas-demo.sql`) |
-| `tests/` | Testes das regras de negócio |
-| `docs/` | `SUPABASE.md`, `ERS.md`, `API.md`, `BACKLOG.md`, `DECISOES.md`, `CHECKLIST_ENTREGA.md`, `REVISAO_SPRINT.md`, `TESTES.md` e `diagramas/` |
-
-A ordem dos scripts em `index.html` importa: `config`, `geo`, `supabase`, `api`, `features`, `pages` e, por último, `script`.
-
-**Banco de dados:** o site escolhe sozinho entre Supabase (se `js/config.js` estiver preenchido e o banco responder), servidor Node com SQLite (`npm start`) e modo local no navegador. Passo a passo do Supabase em `docs/SUPABASE.md`.
-
-**Vídeo do hero (opcional):** preencha `heroVideo` em `js/script.js` com um arquivo `.webm` ou `.mp4`. Sem ele, o hero usa a foto. Ao usar um vídeo, credite o autor no rodapé.
-
-## Como rodar
-
-**Com banco de dados (recomendado)**, precisa de Node 22.5 ou mais novo:
-
-```
+```bash
 npm start
 ```
 
-Abra http://localhost:3000. O servidor (`server/index.js`) serve o site e a API em `/api` e grava tudo em um banco SQLite (`server/gastromatch.db`, criado sozinho a partir de `server/schema.sql`). O front detecta o servidor automaticamente.
+Abra <http://localhost:3000/>. O Node serve a interface e a API. O SQLite é criado em `server/gastromatch.db` e as contas de demonstração aparecem na tela de login. Para avaliar sem alterar um banco existente, configure `DB_FILE` com um caminho novo. O [manual](docs/sprint-3/MANUAL.md) cobre variáveis, configuração de nuvem e roteiro da Mostra.
 
-**Sem servidor**: abra o `index.html` (ou publique a pasta no Vercel). O site funciona em modo local, guardando os dados no navegador.
+A interface pode rodar como site estático na Vercel, com Supabase Auth e PostgreSQL quando configurados. O servidor Node, quando disponível na mesma origem ou explicitamente configurado, tem prioridade. Na ausência de ambos, a interface inicia em modo de demonstração individual no navegador.
 
-**Front em um endereço e API em outro**: edite `js/config.js` e coloque `window.GM_API_BASE = 'https://seu-servidor.com/api'`.
+## O que experimentar
 
-Variáveis do servidor: `PORT`, `DB_FILE`, `JWT_SECRET` (defina um segredo próprio em produção).
+- **Cozinheiro.** Busca por receita, chef ou ingrediente, filtros combináveis, compra avulsa, assinatura simulada, ficha PDF, modo cozinha, pedido de kit, avaliação e perfil.
+- **Criador.** Solicitação de cadastro, painel de aprovação, edição de receitas e rascunhos, preço de kit, pedidos e respostas.
+- **Administrador.** Curadoria de criadores, consulta à base de usuários e transações de demonstração.
+
+O cartão fictício com final `0000` simula recusa. O PIX simulado aprova no próprio ambiente. O cupom `GASTRO10` aplica 10%. O preço registrado é calculado pela camada de dados. A distância por CEP é aproximada.
+
+## Código e dados
+
+| Caminho | Responsabilidade |
+|---|---|
+| `index.html`, `css/`, `assets/` | Estrutura, estilos responsivos e imagens-base com créditos |
+| `js/script.js`, `js/features.js`, `js/pages.js` | Navegação, catálogo, autenticação, checkout e painéis |
+| `js/checkout.js`, `js/geo.js` | Preços-base, validações e simulação de distância compartilhadas pelo Node e pela demonstração local |
+| `js/api.js`, `js/supabase.js`, `js/config.js` | Escolha da fonte de dados, cliente REST e adaptador da nuvem |
+| `server/index.js`, `server/schema.sql` | API Node e esquema SQLite |
+| `server/supabase.sql` | Esquema PostgreSQL, RLS, catálogo comercial de demonstração e funções RPC |
+| `tests/` | Testes de negócio, integração e interface |
+| `docs/` | Requisitos, diagramas, documentação e evidências |
 
 ## Testes
 
+```bash
+npm test
 ```
-npm test                                              # regras de negócio (modo local) + adaptador do Supabase (simulado)
-API_URL=http://localhost:3000/api node tests/api.test.js   # as mesmas verificações contra o banco
-```
 
+A suíte padrão exercita as regras na demonstração local e o adaptador Supabase simulado. A suíte de negócio também roda contra SQLite. O [relatório de testes](docs/TESTES.md) cobre os comandos, os cenários de Chromium e PostgreSQL isolado e o que permanece para homologar na nuvem.
 
+## Sprint 3
 
-## Publicação
+Veja o [índice de todos os entregáveis](docs/sprint-3/README.md), a [ERS final](docs/ERS.md), a [API](docs/API.md), os [diagramas](docs/diagramas/README.md), o [backlog](docs/BACKLOG.md) e as [limitações](docs/sprint-3/LIMITACOES.md).
 
-- **Vercel (somente front)**: continua funcionando em modo local.
-- **Supabase (recomendado, sem servidor extra)**: veja `docs/SUPABASE.md`.
-- **Servidor Node com banco**: hospede o `server/` em um serviço de Node com disco persistente (Render, Railway, Fly.io) ou migre o `schema.sql` para PostgreSQL (Supabase, Neon). Depois aponte o `GM_API_BASE` para ele.
+A versão pública anterior está disponível na Vercel. Esta revisão requer aplicação do SQL e publicação do front correspondente para que as mudanças também estejam na nuvem. [GastroMatch na Vercel](https://gastro-match.vercel.app/)

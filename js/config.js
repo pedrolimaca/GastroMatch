@@ -13,7 +13,7 @@ window.GM_SUPABASE = {
   key: 'sb_publishable_O2nDRD4_Ob7zE5DtgNexPA_T8yr1tpb'
 };
 
-/* GM_API_BASE (servidor Node próprio, opcional; ignorado quando o Supabase está ativo):
-   null     -> detecta sozinho: se existir /api no mesmo endereço (npm start), usa o banco SQLite; senão usa o modo local (navegador).
+/* GM_API_BASE (servidor Node opcional, com prioridade sobre o Supabase):
+   null     -> detecta sozinho: se existir /api no mesmo endereço (npm start), usa o SQLite; senão tenta Supabase e o modo local (navegador).
    'https://seu-servidor.com/api' -> força um back-end hospedado em outro endereço. */
 window.GM_API_BASE = null;

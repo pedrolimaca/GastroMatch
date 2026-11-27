@@ -1,0 +1,5 @@
+PASS  Links diretos, recarga, busca por ingrediente, receita inexistente e receita sem kit.
+PASS  Cadastro, cartão recusado, PIX simulado com cupom e modo cozinha liberado.
+PASS  Ficha PDF baixada com identificação da conta autenticada.
+PASS  CEP fora do raio, troca de modalidade, retirada e checkout móvel a 390 px.
+PASS  Exclusão da conta pela interface; credenciais revogadas, sem erros de execução no navegador.

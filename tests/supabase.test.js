@@ -115,9 +115,15 @@ const rej = async (p, status, frag) => { try{ await p; }catch(e){ assert.strictE
     store['gm-sb-session'] = JSON.stringify({ access_token: 'VELHO', refresh_token: 'R9', expires_at: 1 });
     handler = u => u.includes('grant_type=refresh_token') ? { status: 200, json: { access_token: 'NOVO', refresh_token: 'R10', expires_in: 3600 } }
       : u.endsWith('/rpc/gm_ping') ? { status: 200, json: true } : { status: 200, json: { posts: [] } };
-    assert.strictEqual(await SB.init(), true);                       // o ping já renova a sessão
-    assert.ok(calls[0].url.includes('grant_type=refresh_token')); assert.strictEqual(calls[0].body.refresh_token, 'R9');
-    assert.strictEqual(calls[1].headers.Authorization, 'Bearer NOVO');
+    assert.strictEqual(await SB.init(), true);
+    assert.strictEqual(calls.length, 1);
+    assert.strictEqual(calls[0].headers.Authorization, undefined);
+    calls = [];
+    await Promise.all([SB.request('GET', '/posts'), SB.request('GET', '/posts')]);
+    assert.strictEqual(calls.length, 3);
+    assert.ok(calls[0].url.includes('grant_type=refresh_token'));
+    assert.strictEqual(calls[0].body.refresh_token, 'R9');
+    assert.ok(calls.slice(1).every(c => c.headers.Authorization === 'Bearer NOVO'));
     assert.strictEqual(JSON.parse(store['gm-sb-session']).refresh_token, 'R10');
     calls = []; await SB.request('GET', '/posts');                   // sessão válida: não renova de novo
     assert.strictEqual(calls.length, 1); assert.strictEqual(calls[0].headers.Authorization, 'Bearer NOVO');
@@ -148,14 +154,16 @@ const rej = async (p, status, frag) => { try{ await p; }catch(e){ assert.strictE
     handler = u => u.includes('/token?grant_type=password') ? { status: 200, json: session() } : { status: 200, json: { user: { id: 'u1', email: 'a@b.com', kind: 'amador' } } };
     await SB.request('POST', '/auth/login', { email: 'a@b.com', password: '123456' });
     await rej(SB.request('POST', '/me/delete', { password: '123456', confirm: 'excluir' }), 422, 'EXCLUIR');
-    handler = u => u.includes('/token?grant_type=password') ? { status: 400, json: { error_code: 'invalid_credentials' } } : { status: 200, json: { user: { email: 'a@b.com' } } };
+    handler = () => gmErr(401, 'A senha está incorreta.');
     await rej(SB.request('POST', '/me/delete', { password: 'errada', confirm: 'EXCLUIR' }), 401, 'senha');
     assert.ok(store['gm-sb-session'], 'senha errada não pode encerrar a sessão');
-    calls = []; handler = u => u.includes('/token?grant_type=password') ? { status: 200, json: session({ access_token: 'JWT3' }) }
-      : u.endsWith('/rpc/gm_me') ? { status: 200, json: { user: { email: 'a@b.com' } } } : { status: 200, json: {} };
+    calls = []; handler = () => ({ status: 200, json: {} });
     await SB.request('POST', '/me/delete', { password: '123456', confirm: 'EXCLUIR' });
-    const del = calls.find(c => c.url.endsWith('/rpc/gm_delete_account'));
-    assert.deepStrictEqual(del.body, { p_confirm: 'EXCLUIR' }); assert.strictEqual(del.headers.Authorization, 'Bearer JWT3');
+    assert.strictEqual(calls.length, 1);
+    const [del] = calls;
+    assert.ok(del.url.endsWith('/rpc/gm_delete_account'));
+    assert.deepStrictEqual(del.body, { p_confirm: 'EXCLUIR', p_password: '123456' });
+    assert.strictEqual(del.headers.Authorization, 'Bearer JWT1');
     assert.strictEqual(store['gm-sb-session'], undefined);
     assert.deepStrictEqual(await SB.request('GET', '/me'), { user: null });
     handler = () => gmErr(403, 'A conta de administrador não pode ser excluída pelo site.');

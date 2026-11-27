@@ -3,7 +3,7 @@ const fs = require('fs'), assert = require('assert');
 const store = {}; const localStorage = { getItem:k => (k in store ? store[k] : null), setItem:(k, v) => { store[k] = String(v); }, removeItem:k => { delete store[k]; } };
 /* Modo local (padrão): node tests/api.test.js | Modo servidor/banco: API_URL=http://localhost:3000/api node tests/api.test.js */
 const GEO = require('../js/geo.js'), URL_API = process.env.API_URL || null;
-const API = new Function('localStorage', 'crypto', 'GEO', 'window', fs.readFileSync(__dirname + '/../js/api.js', 'utf8') + ';return API;')(localStorage, require('crypto').webcrypto, GEO, { GM_API_BASE: URL_API });
+const API = new Function('localStorage', 'crypto', 'GEO', 'Checkout', 'window', fs.readFileSync(__dirname + '/../js/api.js', 'utf8') + ';return API;')(localStorage, require('crypto').webcrypto, GEO, require('../js/checkout.js'), { GM_API_BASE: URL_API });
 console.log('Modo de teste: ' + (URL_API ? 'servidor com banco de dados (' + URL_API + ')' : 'local (localStorage)'));
 let ok = 0, bad = 0, CH = '';
 async function t(nome, fn){ try{ await fn(); ok++; console.log('PASS  ' + nome); }catch(e){ bad++; console.log('FAIL  ' + nome + ' -> ' + e.message); } }
@@ -40,7 +40,7 @@ const RUN = Date.now(); const em = n => n + RUN + '@x.com';
   let rid;
   await t('RF02 criador aprovado salva rascunho e ele NÃO aparece na vitrine pública', async () => {
     await login(em('novo'), '123456');
-    const r = await API.post('/recipes', { name:'Risoto de Abóbora', price:25.9, minutes:40, restricao:'vegano', draft:true, ingredientes:'Arroz\nAbóbora', instrucoes:'Refogue\nSirva' }); rid = r.recipe.id;
+    const r = await API.post('/recipes', { name:'Risoto de Abóbora', price:25.9, kitPrice:40, minutes:40, restricao:'vegano', draft:true, ingredientes:'Arroz\nAbóbora', instrucoes:'Refogue\nSirva' }); rid = r.recipe.id;
     assert.strictEqual(r.recipe.status, 'rascunho');
     assert(!(await API.get('/recipes')).recipes.some(x => x.id === rid));
   });
@@ -59,10 +59,11 @@ const RUN = Date.now(); const em = n => n + RUN + '@x.com';
   await t('RF03 cupom inválido é rejeitado; cupom GASTRO10 aplica 10%', async () => {
     await err(API.post('/checkout', { type:'receita', refId:rid, chefId:CH, amount:25.9, metodo:'pix', cupom:'FALSO' }), 422, 'Cupom');
     const r = await API.post('/checkout', { type:'receita', refId:rid, chefId:CH, amount:100, metodo:'pix', cupom:'GASTRO10' });
-    assert.strictEqual(r.tx.valor, 90); assert((await API.get('/me')).access.includes(rid));
+    assert.strictEqual(r.tx.valor, 23.31); assert((await API.get('/me')).access.includes(rid));
   });
   await t('RF03 assinatura de catálogo libera o chef e registra transação', async () => {
-    await API.post('/checkout', { type:'assinatura', refId:'torino', chefId:'torino', amount:29, metodo:'pix' }); assert((await API.get('/me')).subs.includes('torino'));
+    const r = await API.post('/checkout', { type:'assinatura', refId:'torino', chefId:'torino', amount:29, metodo:'pix' });
+    assert.strictEqual(r.tx.valor, 29); assert((await API.get('/me')).subs.includes('torino'));
   });
   await t('RF04/RN02 kit fora do raio é bloqueado (422)', async () => {
     let fora = null; for(let n = 10000000; n < 99999999; n += 7919){ if(API.distanceKm(String(n), CH) > 6){ fora = String(n); break; } }
@@ -71,7 +72,24 @@ const RUN = Date.now(); const em = n => n + RUN + '@x.com';
   });
   await t('RN03 kit sem aceite do termo sanitário é bloqueado', async () => { await err(API.post('/checkout', { type:'kit', refId:rid, chefId:CH, amount:40, metodo:'pix', entrega:'retirada', termo:false }), 422, 'Vigilância Sanitária'); });
   await t('RF04 retirada no estabelecimento dispensa raio e gera pedido', async () => {
-    const r = await API.post('/checkout', { type:'kit', refId:rid, recipeName:'Risoto de Abóbora', chefId:CH, amount:40, metodo:'pix', entrega:'retirada', slot:'Retirar no local', termo:true }); assert.strictEqual(r.order.status, 'AGUARDANDO');
+    const r = await API.post('/checkout', { type:'kit', refId:rid, recipeName:'Outro título', chefId:CH, amount:0.01, metodo:'pix', entrega:'retirada', slot:'Retirar no local', termo:true });
+    assert.strictEqual(r.order.status, 'AGUARDANDO'); assert.strictEqual(r.order.valor, 40); assert.strictEqual(r.order.recipeName, 'Risoto de Abóbora');
+  });
+  await t('Checkout valida referência, criador, modalidade, disponibilidade e cupom', async () => {
+    await err(API.post('/checkout', { type:'receita', refId:'sem-receita', metodo:'pix' }), 404);
+    await err(API.post('/checkout', { type:'receita', refId:rid, chefId:'torino', metodo:'pix' }), 422);
+    await err(API.post('/checkout', { type:'kit', refId:rid, termo:true, entrega:'outra', metodo:'pix' }), 422);
+    await err(API.post('/checkout', { type:'receita', refId:rid, cupom:'constructor', metodo:'pix' }), 422);
+    await err(API.post('/checkout', { type:'assinatura', refId:'sem-criador', metodo:'pix' }), 404);
+    await login(em('novo'), '123456');
+    const semKit = (await API.post('/recipes', { name:'Receita sem kit', price:10, minutes:15 })).recipe;
+    await API.patch('/recipes/' + rid, { status:'rascunho' });
+    await login(em('joana'), '123456');
+    await err(API.post('/checkout', { type:'receita', refId:rid, metodo:'pix' }), 404);
+    await err(API.post('/checkout', { type:'kit', refId:semKit.id, termo:true, entrega:'retirada', metodo:'pix' }), 422, 'Kit indisponível');
+    await login(em('novo'), '123456');
+    await API.patch('/recipes/' + rid, { status:'publicada' });
+    await login(em('joana'), '123456');
   });
   await t('RF06 amador publica post com nota e dúvida; comentário vazio é bloqueado', async () => {
     await err(API.post('/posts', { recipeId:rid, caption:'  ', stars:5 }), 422);

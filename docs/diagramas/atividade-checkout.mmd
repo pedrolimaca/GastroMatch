@@ -1,0 +1,13 @@
+flowchart TD
+  S([Início]) --> A["Verificar conta de cozinheiro e item disponível"]
+  A --> B{É kit com entrega?}
+  B -- Sim --> C{Termo aceito e CEP no raio?}
+  C -- Não --> D["Corrigir CEP ou escolher retirada"] --> B
+  C -- Sim --> E
+  B -- Não --> E["Verificar termo se for kit; resolver preço e cupom"]
+  E --> P{Pagamento simulado aprovado?}
+  P -- Não --> R["Gravar recusa e retornar 402"] --> F([Fim])
+  P -- Sim --> G{Tipo}
+  G -- Receita --> I["Registrar acesso à receita"] --> F
+  G -- Assinatura --> J["Registrar assinatura do catálogo"] --> F
+  G -- Kit --> K["Registrar pedido AGUARDANDO"] --> F

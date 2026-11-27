@@ -1,7 +1,7 @@
 # Documentação da API
 
 Base: `/api` (mesmo endereço do site quando se usa `npm start`, ou o valor de `GM_API_BASE` em `js/config.js`).
-Formato: JSON. Autenticação: cabeçalho `Authorization: Bearer <token>`, recebido no login ou no cadastro (validade de 7 dias).
+Formato: JSON. Autenticação: cabeçalho `Authorization: Bearer <token>`, recebido no login ou no cadastro (validade de 7 dias, token HMAC da API Node).
 Erros: resposta `{ "message": "texto para o usuário" }` com o status HTTP correspondente.
 
 | Status | Significado |
@@ -46,19 +46,22 @@ Categorias aceitas: `alta`, `massas`, `carnes`, `brasileiras`, `vegetarianas`, `
 | Campo | Descrição |
 |---|---|
 | `type` | `receita`, `assinatura` ou `kit` |
-| `refId`, `chefId`, `amount` | Item comprado, restaurante e valor de tabela |
+| `refId` | ID da receita-base ou publicada. Para assinatura, ID do criador |
+| `chefId` | Opcional, conferido com o criador associado ao item |
 | `metodo` | `cartao` ou `pix` |
 | `card` | Número do cartão (13 a 19 dígitos). Final `0000` simula recusa |
 | `cupom` | `GASTRO10` (10%) ou `CHEF20` (20%) |
-| Só para kit | `termo` (obrigatório), `entrega` (`entrega` ou `retirada`), `cep`, `slot`, `recipeName` |
+| Só para kit | `termo` (obrigatório), `entrega` (`entrega` ou `retirada`), `cep` (exigido para entrega), `slot` (janela) |
 
-Resposta 200: `{ tx, order }` (`order` só no kit). Erros: 402 pagamento recusado (a transação fica registrada como RECUSADA e nada é liberado), 422 (cupom inválido, termo sanitário, CEP inválido, endereço fora do raio), 403 (conta de criador ou admin).
+O total é apurado pela API a partir do catálogo e do cupom. O preço e o título enviados por clientes antigos são ignorados. Pagamentos são simulados.
+
+Resposta 200: `{ tx, order }` (`order` só no kit). Erros: 402 pagamento recusado (a transação fica registrada como RECUSADA e nada é liberado), 422 (cupom inválido, termo sanitário, CEP inválido, endereço fora do raio), 403 (conta de criador ou admin), 404 (item indisponível ou criador não aprovado).
 
 Exemplo de recusa:
 
 ```
 curl -X POST http://localhost:3000/api/checkout -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"type":"receita","refId":"r1","chefId":"torino","amount":39.9,"metodo":"cartao","card":"4242424242420000"}'
+  -d '{"type":"receita","refId":"risoto-funghi","chefId":"torino","metodo":"cartao","card":"4242424242420000"}'
 # 402 {"message":"Transação não autorizada. Tente outro cartão ou PIX."}
 ```
 
@@ -98,3 +101,18 @@ curl -X POST http://localhost:3000/api/checkout -H "Authorization: Bearer $TOKEN
 | Chef aprovado | chef@gastromatch.com | chef123 |
 | Chef pendente | beatriz@email.com | 123456 |
 | Cozinheira | marina@email.com | 123456 |
+
+## Supabase
+
+O adaptador `js/supabase.js` conserva o contrato acima para a interface. A autenticação usa `/auth/v1`. O restante usa `POST /rest/v1/rpc/<funcao>` com chave pública no cabeçalho `apikey` e, nos fluxos restritos, token Bearer do Auth.
+
+| Operação | RPC |
+|---|---|
+| Disponibilidade, catálogo e perfil | `gm_ping`, `gm_recipes`, `gm_me` |
+| Nome e exclusão | `gm_update_name(p_name)`, `gm_delete_account(p_confirm, p_password)` |
+| Receitas | `gm_recipe_create(p_data)`, `gm_recipe_update(p_id, p_data)`, `gm_recipe_delete(p_id)` |
+| Checkout | `gm_checkout(p_data)` |
+| Comunidade | `gm_posts`, `gm_post_create(p_data)`, `gm_post_reply(p_id, p_text)` |
+| Painéis | `gm_dashboard`, `gm_creator_radius(p_raio)`, `gm_order_status(p_id, p_status)`, `gm_admin_overview`, `gm_admin_creator(p_id, p_acao)` |
+
+O checkout RPC recebe `card_ok` em vez do número de cartão. Uma recusa devolve `refused: true` para preservar a transação no PostgreSQL. O adaptador apresenta status 402 à interface. Códigos PostgreSQL `GMxxx` são traduzidos para o status equivalente na aplicação. A troca de senha usa Supabase Auth. A exclusão verifica a senha novamente no PostgreSQL e remove a conta autenticada.

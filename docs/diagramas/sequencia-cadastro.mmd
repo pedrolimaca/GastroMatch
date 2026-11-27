@@ -1,0 +1,20 @@
+sequenceDiagram
+  actor V as Visitante
+  participant UI as Formulário
+  participant API as API Node ou Supabase Auth
+  participant DB as SQLite ou PostgreSQL
+  V->>UI: Preenche nome, e-mail e senha
+  UI->>UI: Valida os campos
+  UI->>API: Envia dados do cadastro
+  API->>DB: Valida unicidade e registra conta
+  alt Dados aceitos e confirmação dispensada
+    DB-->>API: Conta registrada
+    API-->>UI: Sessão e perfil
+    UI-->>V: Abre a plataforma
+  else E-mail duplicado ou dados inválidos
+    API-->>UI: Erro de validação
+    UI-->>V: Exibe mensagem
+  else Confirmação de e-mail habilitada
+    API-->>UI: Cadastro sem sessão ativa
+    UI-->>V: Solicita confirmação por e-mail
+  end

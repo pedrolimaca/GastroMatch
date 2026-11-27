@@ -1,0 +1,19 @@
+sequenceDiagram
+  actor U as Cozinheiro
+  participant UI as Checkout
+  participant API as Checkout Node ou RPC
+  participant DB as Banco
+  U->>UI: Seleciona kit, entrega ou retirada
+  UI->>UI: Confere CEP demonstrativo para entrega
+  U->>UI: Aceita o termo e escolhe o pagamento
+  UI->>API: Envia ID, modalidade e dados da simulação
+  API->>DB: Busca preço do kit e raio do criador
+  alt Raio ou dados inválidos
+    API-->>UI: Erro de validação sem pedido
+  else Pagamento recusado
+    API->>DB: Registra transação RECUSADA
+    API-->>UI: Indica erro 402
+  else Pagamento aprovado
+    API->>DB: Grava transação e pedido AGUARDANDO
+    API-->>UI: Confirma o pedido
+  end
