@@ -21,7 +21,7 @@ O GastroMatch é uma aplicação web responsiva que permite descobrir receitas, 
 | ID | Requisito | Critério de aceite e situação no MVP |
 |---|---|---|
 | RF01 | Cadastro e validação do criador | Nome, e-mail, senha, tipo, referência do comprovante, termo sanitário e raio de 1 a 15 km. Nasce pendente e só publica após decisão do administrador. Parcial em relação à Sprint 1, pois apenas o nome do documento é armazenado. |
-| RF02 | Marketplace de receitas e videoaulas | O criador aprovado publica, edita, despublica ou salva rascunhos. A vitrine exibe receitas publicadas de criadores aprovados. Aceita link HTTPS/HTTP de videoaula. Implementado no escopo MVP. |
+| RF02 | Marketplace de receitas e videoaulas | O criador aprovado publica, edita, despublica ou salva rascunhos. A vitrine exibe receitas publicadas de criadores aprovados. Aceita link HTTPS, oferece prévia e reproduz YouTube, Vimeo ou arquivo compatível. Implementado no escopo MVP. |
 | RF03 | Compra avulsa e assinatura | O checkout valida o item, consulta o preço, aplica cupom e registra a transação. Aprovação avulsa libera a receita e assinatura libera o catálogo do criador. Parcial em relação à Sprint 1, pois cobrança e recorrência reais estão pendentes. |
 | RF04 | Venda e logística de kits | Receita precisa ter kit precificado. Com termo aceito, entrega exige CEP dentro do raio demonstrativo. Retirada dispensa o CEP. O criador acompanha o pedido. Parcial em relação à Sprint 1, pois a geocodificação é simulada e não há estoque real. |
 | RF05 | Cadastro e acesso do amador | Cadastro valida nome (mínimo 3 caracteres), e-mail e senha (mínimo 6). Login inválido é recusado. Cadastro válido inicia sessão quando a confirmação por e-mail está desligada. Implementado. |
@@ -47,7 +47,7 @@ RF07–RF09 foram incorporados no repositório após a especificação inicial. 
 | ID | Requisito | Situação |
 |---|---|---|
 | RNF01 | Web e aplicativo móvel | Web responsiva. Aplicativo móvel separado permanece futuro. |
-| RNF02 | Proteção de vídeo pago | Interface exibe vídeo apenas após liberação. Conteúdos e links públicos e controles do player são insuficientes para proteção contra cópia. Hospedagem privada fica para evolução. |
+| RNF02 | Proteção de vídeo pago | A API autoriza o link das aulas de criadores para administrador, autor, comprador ou assinante. Provedores externos definem as regras de incorporação e compartilhamento. Hospedagem privada e proteção contra cópia ficam para evolução. |
 | RNF03 | Marca d’água em PDF | Ficha de receita liberada usa o e-mail da conta autenticada. A geração depende do jsPDF carregado por CDN. |
 | RNF04 | Modo cozinha | Checklist de ingredientes, marcação de passos e tamanho de texto ajustável. |
 | RNF-R | Responsividade | Catálogo e checkout exercitados no Chromium. Checkout conferido a 390 px na revisão. |

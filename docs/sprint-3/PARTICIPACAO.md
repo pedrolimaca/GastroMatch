@@ -1,6 +1,6 @@
 # Participação individual — Sprint 3
 
-O histórico público da base `d25c261` registra cinco commits sob o nome Pedro Cavalcanti e um sob o nome de conta `beamgomes`. Essa autoria de commits documenta mudanças no repositório. Os PDFs identificam os membros da equipe, mas não distribuem as tarefas individuais. A revisão assistida deve ser registrada separadamente das atividades da equipe.
+O histórico público da base `d25c261` registra cinco commits sob o nome Pedro Cavalcanti e um sob o nome de conta `beamgomes`. O histórico também registra a integração do [PR #1](https://github.com/pedrolimaca/GastroMatch/pull/1) pelo commit [7637520](https://github.com/pedrolimaca/GastroMatch/commit/7637520), associado à conta `pedrolimaca`. Essa autoria de commits documenta mudanças no repositório. Os PDFs identificam os membros da equipe, mas não distribuem as tarefas individuais. A revisão assistida deve ser registrada separadamente das atividades da equipe.
 
 | Integrante | Evidência disponível | Evidência individual a confirmar pela equipe |
 |---|---|---|

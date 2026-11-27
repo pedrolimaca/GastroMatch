@@ -28,6 +28,7 @@ O cartão fictício com final `0000` simula recusa. O PIX simulado aprova no pr�
 |---|---|
 | `index.html`, `css/`, `assets/` | Estrutura, estilos responsivos e imagens-base com créditos |
 | `js/script.js`, `js/features.js`, `js/pages.js` | Navegação, catálogo, autenticação, checkout e painéis |
+| `js/video.js` | Validação de endereço e formatos de reprodução de videoaulas |
 | `js/checkout.js`, `js/geo.js` | Preços-base, validações e simulação de distância compartilhadas pelo Node e pela demonstração local |
 | `js/api.js`, `js/supabase.js`, `js/config.js` | Escolha da fonte de dados, cliente REST e adaptador da nuvem |
 | `server/index.js`, `server/schema.sql` | API Node e esquema SQLite |
@@ -47,4 +48,6 @@ A suíte padrão exercita as regras na demonstração local e o adaptador Supaba
 
 Veja o [índice de todos os entregáveis](docs/sprint-3/README.md), a [ERS final](docs/ERS.md), a [API](docs/API.md), os [diagramas](docs/diagramas/README.md), o [backlog](docs/BACKLOG.md) e as [limitações](docs/sprint-3/LIMITACOES.md).
 
-A versão pública anterior está disponível na Vercel. Esta revisão requer aplicação do SQL e publicação do front correspondente para que as mudanças também estejam na nuvem. [GastroMatch na Vercel](https://gastro-match.vercel.app/)
+Veja [como publicar uma videoaula](docs/sprint-3/VIDEOAULAS.md) e [como homologar a migração](docs/sprint-3/HOMOLOGACAO.md).
+
+A versão pública da primeira revisão está disponível na Vercel. Esta revisão requer aplicação do SQL e publicação do front correspondente para que as mudanças também estejam na nuvem. [GastroMatch na Vercel](https://gastro-match.vercel.app/)

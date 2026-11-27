@@ -367,6 +367,20 @@ begin
   end if;
 end $$;
 
+create or replace function public.gm_video_validate(p_data jsonb, p_previous text) returns text
+language plpgsql as $$
+declare v_url text;
+begin
+  if not (p_data ? 'video') then return p_previous; end if;
+  v_url := btrim(coalesce(p_data->>'video', ''));
+  if jsonb_typeof(p_data->'video') <> 'string' or
+     (v_url <> '' and v_url <> p_previous and
+       (char_length(v_url) > 4096 or v_url !~* '^https://(\[[0-9a-f:]+\]|[a-z0-9.-]+)(:[0-9]+)?([/?#][^[:space:]\\]*)?$')) then
+    perform public.gm_fail(422, 'Informe um link HTTPS de uma videoaula. Use YouTube, Vimeo ou um link para o arquivo.');
+  end if;
+  return v_url;
+end $$;
+
 create or replace function public.gm_kit_save(p_id bigint, p_valor numeric, p_comp text) returns void
 language plpgsql as $$
 begin
@@ -451,7 +465,7 @@ end $$;
 create or replace function public.gm_recipes() returns jsonb
 language sql security definer set search_path = public as $$
   select jsonb_build_object(
-    'recipes', coalesce((select jsonb_agg(public.gm_recipe_json(r.id) order by r.id)
+    'recipes', coalesce((select jsonb_agg((public.gm_recipe_json(r.id) - 'video') || jsonb_build_object('hasVideo', r.link_videoaula <> '') order by r.id)
                          from public.receita r join public.criador_conteudo c on c.id = r.id_criador
                          where r.status = 'PUBLICADA' and c.status_validacao = 'APROVADO'), '[]'::jsonb),
     'creators', coalesce((select jsonb_agg(jsonb_build_object('chefId', c.chef_id, 'raio', c.raio_entrega_km,
@@ -459,6 +473,32 @@ language sql security definer set search_path = public as $$
                           from public.criador_conteudo c left join public.usuario us on us.id = c.id_usuario
                           where c.status_validacao = 'APROVADO'), '[]'::jsonb))
 $$;
+
+create or replace function public.gm_recipe_video(p_id text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  u public.usuario;
+  r record;
+  v_manages boolean;
+begin
+  u := public.gm_need_user();
+  select a.status, a.link_videoaula, c.chef_id, c.id_usuario into r
+    from public.receita a join public.criador_conteudo c on c.id = a.id_criador
+    where a.id::text = substring(p_id from '^r([1-9][0-9]*)$') and c.status_validacao = 'APROVADO';
+  if not found then
+    perform public.gm_fail(404, 'Receita indisponível.');
+  end if;
+  v_manages := u.perfil = 'admin' or coalesce(r.id_usuario = u.id, false);
+  if r.status <> 'PUBLICADA' and not v_manages then
+    perform public.gm_fail(404, 'Receita indisponível.');
+  end if;
+  if not v_manages
+     and not exists (select 1 from public.acesso_receita where id_usuario = u.id and id_receita = p_id)
+     and not exists (select 1 from public.assinatura where id_usuario = u.id and chef_id = r.chef_id) then
+    perform public.gm_fail(403, 'Desbloqueie a receita para assistir à videoaula.');
+  end if;
+  return jsonb_build_object('video', r.link_videoaula);
+end $$;
 
 create or replace function public.gm_recipe_create(p_data jsonb) returns jsonb
 language plpgsql security definer set search_path = public as $$
@@ -474,7 +514,7 @@ begin
   values (c.id, btrim(p_data->>'name'), btrim(coalesce(p_data->>'desc', '')), public.gm_lines(p_data->>'instrucoes'), v_ing,
           coalesce(nullif(p_data->>'restricao', ''), 'sem restrição'), v_cat,
           round(public.gm_num(p_data->>'minutes'))::int, round(public.gm_num(p_data->>'price'), 2),
-          btrim(coalesce(p_data->>'video', '')), coalesce(p_data->>'img', ''),
+          public.gm_video_validate(p_data, ''), coalesce(p_data->>'img', ''),
           case when coalesce(p_data->>'draft', '') = 'true' then 'RASCUNHO' else 'PUBLICADA' end)
   returning id into v_id;
   perform public.gm_kit_save(v_id, coalesce(public.gm_num(p_data->>'kitPrice'), 0), v_ing::text);
@@ -505,7 +545,7 @@ begin
       instrucoes = public.gm_lines(p_data->>'instrucoes'), ingredientes = v_ing,
       categoria_restricao = coalesce(nullif(p_data->>'restricao', ''), 'sem restrição'), categoria = v_cat,
       tempo_preparo_min = round(public.gm_num(p_data->>'minutes'))::int, preco = round(public.gm_num(p_data->>'price'), 2),
-      link_videoaula = btrim(coalesce(p_data->>'video', '')), imagem = coalesce(nullif(p_data->>'img', ''), r.imagem),
+      link_videoaula = public.gm_video_validate(p_data, r.link_videoaula), imagem = coalesce(nullif(p_data->>'img', ''), r.imagem),
       status = v_status
     where id = r.id;
     perform public.gm_kit_save(r.id, coalesce(public.gm_num(p_data->>'kitPrice'), 0), v_ing::text);
@@ -769,7 +809,7 @@ begin
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public' and p.proname like 'gm\_%'
   loop
-    if r.proname = 'gm_delete_account' then
+    if r.proname in ('gm_delete_account', 'gm_recipe_video') then
       execute format('revoke all on function %s from public, anon, authenticated', r.sig);
       execute format('grant execute on function %s to authenticated', r.sig);
     elsif r.proname = any (api_fns) then

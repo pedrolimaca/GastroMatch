@@ -167,6 +167,7 @@ const SB = (() => {
   });
 
   route('GET', '/recipes', () => rpc('gm_recipes'));
+  route('GET', '/recipes/:id/video', (b, p) => rpc('gm_recipe_video', { p_id:p[0] }));
   route('POST', '/recipes', b => rpc('gm_recipe_create', { p_data: b }));
   route('PATCH', '/recipes/:id', (b, p) => rpc('gm_recipe_update', { p_id: p[0], p_data: b }));
   route('DELETE', '/recipes/:id', (b, p) => rpc('gm_recipe_delete', { p_id: p[0] }));

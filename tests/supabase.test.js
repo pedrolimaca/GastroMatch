@@ -78,14 +78,14 @@ const rej = async (p, status, frag) => { try{ await p; }catch(e){ assert.strictE
     handler = u => u.includes('/token') ? { status: 200, json: session() } : { status: 200, json: { user: { id: 'u1', email: 'a@b.com', kind: 'criador' } } };
     await SB.request('POST', '/auth/login', { email: 'a@b.com', password: '123456' });
     const seen = []; handler = (u, b) => { seen.push([u.split('/rpc/')[1], JSON.stringify(b)]); return { status: 200, json: {} }; };
-    await SB.request('GET', '/recipes'); await SB.request('POST', '/recipes', { name: 'X', price: 10 });
+    await SB.request('GET', '/recipes'); await SB.request('GET', '/recipes/r7/video'); await SB.request('POST', '/recipes', { name: 'X', price: 10 });
     await SB.request('PATCH', '/recipes/r7', { status: 'publicada' }); await SB.request('DELETE', '/recipes/r7');
     await SB.request('GET', '/posts'); await SB.request('POST', '/posts', { caption: 'oi', stars: 5 }); await SB.request('POST', '/posts/9/reply', { text: 'ok' });
     await SB.request('GET', '/dashboard'); await SB.request('PATCH', '/creator', { raio: '9' }); await SB.request('PATCH', '/orders/3', { status: 'ENTREGUE' });
     await SB.request('GET', '/admin/overview'); await SB.request('POST', '/admin/creators/4/approve');
     await SB.request('PATCH', '/me', { name: 'Novo Nome' });
     assert.deepStrictEqual(seen, [
-      ['gm_recipes', '{}'], ['gm_recipe_create', '{"p_data":{"name":"X","price":10}}'],
+      ['gm_recipes', '{}'], ['gm_recipe_video', '{"p_id":"r7"}'], ['gm_recipe_create', '{"p_data":{"name":"X","price":10}}'],
       ['gm_recipe_update', '{"p_id":"r7","p_data":{"status":"publicada"}}'], ['gm_recipe_delete', '{"p_id":"r7"}'],
       ['gm_posts', '{}'], ['gm_post_create', '{"p_data":{"caption":"oi","stars":5}}'], ['gm_post_reply', '{"p_id":9,"p_text":"ok"}'],
       ['gm_dashboard', '{}'], ['gm_creator_radius', '{"p_raio":9}'], ['gm_order_status', '{"p_id":3,"p_status":"ENTREGUE"}'],

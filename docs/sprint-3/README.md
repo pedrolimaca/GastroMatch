@@ -2,7 +2,7 @@
 
 | Entregável | Local |
 |---|---|
-| MVP e código versionado | Branch `sprint-3/revisao-mvp`, execução por `npm start` |
+| MVP e código versionado | Branch `sprint-3/videoaulas-homologacao`, execução por `npm start` |
 | ERS final | [ERS](../ERS.md) |
 | Diagramas | [Modelagem](../diagramas/README.md) |
 | Banco de dados | [SQLite](../../server/schema.sql) e [PostgreSQL](../../server/supabase.sql) |
@@ -14,4 +14,5 @@
 | Backlog | [Concluídos, retirados e futuros](../BACKLOG.md) |
 | Limitações e evolução | [Registro](LIMITACOES.md) |
 | Apresentação da Mostra | [Slides editáveis](GastroMatch-Mostra.pptx) e [roteiro](ROTEIRO-MOSTRA.md) |
+| Videoaulas e homologação | [Publicar vídeo](VIDEOAULAS.md) e [homologação](HOMOLOGACAO.md) |
 | Participação individual | [Evidências disponíveis e ficha de confirmação](PARTICIPACAO.md) |
